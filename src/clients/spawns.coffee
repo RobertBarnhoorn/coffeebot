@@ -4,7 +4,7 @@ _spawns = Game.spawns
 spawn = (s) -> _spawns[s]
 
 spawnUnit = (s, role) ->
-  body = [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE]
+  body = [WORK, CARRY, MOVE]
   name = role + '_' + Game.time
   return (spawn s) .spawnCreep body,
                                name,

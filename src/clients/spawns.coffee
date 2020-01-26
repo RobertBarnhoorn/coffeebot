@@ -1,15 +1,9 @@
 _spawns = Game.spawns
 
+# Get all spawns
+spawns = _spawns
+
 # Get spawn by name
 spawn = (s) -> _spawns[s]
 
-spawnUnit = (s, role) ->
-  body = [WORK, CARRY, MOVE]
-  name = role + '_' + Game.time
-  return (spawn s) .spawnCreep body,
-                               name,
-                               memory:
-                                 role: role,
-                                 working: false
-
-module.exports = { spawn, spawnUnit }
+module.exports = { spawns, spawn }

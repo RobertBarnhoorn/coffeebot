@@ -28,14 +28,12 @@ build = (unit) ->
       moveTo site, unit
 
 repair = (unit) ->
-  candidates = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.structureType isnt STRUCTURE_WALL and
-                                             s.hits < s.hitsMax
-  if candidates.length
-    target = unit.pos.findClosestByPath candidates.sort((a, b) => a.hits - b.hits) \
-                                                  .slice(0, Math.floor(Math.sqrt(candidates.length)))
-    if unit.repair(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
+  structures = unit.room.find FIND_STRUCTURES,
+                              filter: (s) => s.hits < s.hitsMax
+  target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
+                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
+  if unit.repair(target) == ERR_NOT_IN_RANGE
+    moveTo target, unit
 
 shouldWork = (unit) ->
   if unit.carry.energy is 0 and unit.memory.working

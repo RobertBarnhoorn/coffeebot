@@ -1,4 +1,4 @@
-{ garbageCollection } = require 'memory_actions'
+{ garbageCollection } = require 'memory_management'
 { populationControl } = require 'spawn_management'
 { unitManagement } = require 'unit_management'
 { towerManagement } = require 'tower_management'

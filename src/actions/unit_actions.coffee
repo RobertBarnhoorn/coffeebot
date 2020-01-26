@@ -35,6 +35,16 @@ repair = (unit) ->
   if unit.repair(target) == ERR_NOT_IN_RANGE
     moveTo target, unit
 
+refillTower = (unit) ->
+  tower = unit.pos.findClosestByPath FIND_MY_STRUCTURES,
+                                     filter: (s) => s.structureType == STRUCTURE_TOWER and \
+                                                    s.energy < s.energyCapacity
+  if tower?
+    if unit.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+      moveTo tower, unit
+    return true
+  return false
+
 shouldWork = (unit) ->
   if unit.carry.energy is 0 and unit.memory.working
     false
@@ -52,5 +62,5 @@ moveTo = (location, unit) ->
                                        opacity: .1
 
 module.exports = { upgrade, harvest, transfer,
-                   build, repair, shouldWork,
-                   moveTo }
+                   build, repair, refillTower,
+                   shouldWork, moveTo }

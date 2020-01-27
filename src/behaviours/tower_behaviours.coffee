@@ -1,15 +1,22 @@
-{ filter } = require 'lodash'
-
 defender = (tower) ->
   target = tower.pos.findClosestByRange FIND_HOSTILE_CREEPS
-  tower.attack target if target?
+  if target?
+    tower.attack target
+    return true
+  return false
 
 healer = (tower) ->
-  target = filter tower.pos.findClosestByRange(FIND_MY_CREEPS), (u) => u.hits < u.hitsMax
-  tower.heal target if target?
+  target = tower.pos.findClosestByRange FIND_MY_CREEPS, filter: (u) => u.hits < u.hitsMax
+  if target?
+    tower.heal target
+    return true
+  return false
 
 repairer = (tower) ->
-  target = filter tower.pos.findClosestByRange(FIND_MY_STRUCTURES), (u) => u.hits < u.hitsMax
-  tower.repair target if target?
+  target = tower.pos.findClosestByRange FIND_MY_STRUCTURES, filter: (s) => s.hits < s.hitsMax
+  if target?
+    tower.repair target
+    return true
+  return false
 
 module.exports = { defender, healer, repairer }

@@ -1,7 +1,6 @@
 roles =
   UPGRADER: 'upgrader'
   HARVESTER: 'harvester'
-  BUILDER: 'builder'
-  REPAIRER: 'repairer'
+  ENGINEER: 'engineer'
 
 module.exports = { roles }

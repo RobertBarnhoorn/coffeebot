@@ -38,7 +38,7 @@ repair = (unit) ->
 refillTower = (unit) ->
   tower = unit.pos.findClosestByPath FIND_MY_STRUCTURES,
                                      filter: (s) => s.structureType == STRUCTURE_TOWER and \
-                                                    s.energy < s.energyCapacity
+                                                    s.energy < (s.energyCapacity / 3)
   if tower?
     if unit.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
       moveTo tower, unit

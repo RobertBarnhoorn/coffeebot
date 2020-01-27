@@ -7,11 +7,9 @@
 SPAWN = 'Spawn1'
 desired = (role) ->
   switch role
-    when roles.HARVESTER then 2
-    when roles.UPGRADER then 2
-    when roles.BUILDER then 2
-    when roles.REPAIRER then 1
-    else 1
+    when roles.HARVESTER then 3
+    when roles.UPGRADER then 3
+    when roles.ENGINEER then 3
 
 populationControl = ->
   # Count the actual populations by role

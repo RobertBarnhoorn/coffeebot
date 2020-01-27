@@ -2,8 +2,8 @@
 { filter } = require 'lodash'
 
 towerManagement = ->
-  towers = filter Game.structures, (s) => s.structureType is STRUCTURE_TOWER
-  for tower of towers
-    defender tower is OK or healer tower is OK or repairer tower is OK
+  towers = filter(Game.structures, (s) => s.structureType is STRUCTURE_TOWER)
+  for tower in towers
+    defender(tower) or healer(tower) or repairer(tower)
 
 module.exports = { towerManagement }

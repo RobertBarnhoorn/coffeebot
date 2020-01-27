@@ -54,7 +54,7 @@ shouldWork = (unit) ->
     unit.memory.working
 
 moveTo = (location, unit) ->
-  result = unit.moveTo location, maxRooms: 1, visualizePathStyle:
+  result = unit.moveTo location, reusePath: 0, maxRooms: 1, visualizePathStyle:
                                        fill: 'transparent',
                                        stroke: '#ffaa00',
                                        lineStyle: 'dashed',

@@ -1,4 +1,6 @@
-{ upgrade, harvest, transfer, build, repair, refillTower, shouldWork, moveTo } = require 'unit_actions'
+{ upgrade, harvest, transfer,
+  build, repairStructureUrgent, repairStructureNonUrgent,
+  refillTower, shouldWork, moveTo } = require 'unit_actions'
 
 harvester = (unit) ->
   unit.memory.working = shouldWork unit
@@ -19,7 +21,7 @@ upgrader = (unit) ->
 engineer = (unit) ->
   unit.memory.working = shouldWork unit
   if unit.memory.working
-    refillTower(unit) or build(unit) or repair(unit)
+    refillTower(unit) or repairStructureUrgent(unit) or build(unit) or repairStructureNonUrgent(unit)
   else
     source = unit.pos.findClosestByPath FIND_SOURCES_ACTIVE
     harvest source, unit

@@ -26,19 +26,37 @@ build = (unit) ->
   if site?
     if unit.build(site) == ERR_NOT_IN_RANGE
       moveTo site, unit
+    return true
+  return false
 
-repair = (unit) ->
+repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.hits < s.hitsMax
+                              filter: (s) => s.hits < s.hitsMax and s.hits < 5000 and \
+                                             s.structureType isnt STRUCTURE_WALL
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
                                                 .slice(0, Math.floor(Math.sqrt(structures.length)))
-  if unit.repair(target) == ERR_NOT_IN_RANGE
-    moveTo target, unit
+  if target?
+    if unit.repair(target) == ERR_NOT_IN_RANGE
+      moveTo target, unit
+    return true
+  return false
+
+repairStructureNonUrgent = (unit) ->
+  structures = unit.room.find FIND_STRUCTURES,
+                              filter: (s) => s.hits < s.hitsMax
+
+  target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
+                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
+  if target?
+    if unit.repair(target) == ERR_NOT_IN_RANGE
+      moveTo target, unit
+    return true
+  return false
 
 refillTower = (unit) ->
   tower = unit.pos.findClosestByPath FIND_MY_STRUCTURES,
-                                     filter: (s) => s.structureType == STRUCTURE_TOWER and \
-                                                    s.energy < (s.energyCapacity / 3)
+                                     filter: (s) => s.structureType is STRUCTURE_TOWER and \
+                                                    s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
   if tower?
     if unit.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
       moveTo tower, unit
@@ -62,5 +80,5 @@ moveTo = (location, unit) ->
                                        opacity: .1
 
 module.exports = { upgrade, harvest, transfer,
-                   build, repair, refillTower,
-                   shouldWork, moveTo }
+                   build, repairStructureUrgent, repairStructureNonUrgent,
+                   refillTower, shouldWork, moveTo }

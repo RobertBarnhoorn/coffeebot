@@ -1,11 +1,12 @@
-{ filter } = require('lodash')
+{ filter, reduce } = require 'lodash'
 
 upgrade = (unit) ->
   controller = unit.room.controller
   if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
     moveTo controller, unit
 
-harvest = (source, unit) ->
+harvest = (unit) ->
+  source = unit.pos.findClosestByPath FIND_SOURCES_ACTIVE
   if unit.harvest(source) == ERR_NOT_IN_RANGE
     moveTo source, unit
 
@@ -28,6 +29,20 @@ build = (unit) ->
       moveTo site, unit
     return true
   return false
+
+collect = (unit) ->
+  dropped = unit.room.find FIND_DROPPED_RESOURCES
+  if dropped?
+    target = unit.pos.findClosestByPath dropped
+    if unit.pickup(target) == ERR_NOT_IN_RANGE
+      moveTo target, unit
+  else
+    containers = unit.room.find FIND_MY_STRUCTURES,
+                                filter: (s) => s.structureType is STRUCTURE_CONTAINER
+    target = reduce containers, (max, c) => if max > c then max else c
+    if target?
+      if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+        moveTo target, unit
 
 repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
@@ -79,6 +94,6 @@ moveTo = (location, unit) ->
                                        strokeWidth: .15,
                                        opacity: .1
 
-module.exports = { upgrade, harvest, transfer,
-                   build, repairStructureUrgent, repairStructureNonUrgent,
-                   refillTower, shouldWork, moveTo }
+module.exports = { upgrade, harvest, transfer, build,
+                   repairStructureUrgent, repairStructureNonUrgent,
+                   refillTower, shouldWork, moveTo, collect }

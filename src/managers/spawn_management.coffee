@@ -28,7 +28,6 @@ populationControl = ->
       candidates.push role
     else
       for _,unit of units
-        console.log unit.ticksToLive
         if unit.memory.role == role and unit.ticksToLive < 300 and not unit.memory.replaced?
          candidates.push role
          unit.memory.replaced = true

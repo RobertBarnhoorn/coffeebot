@@ -32,16 +32,17 @@ build = (unit) ->
 
 collect = (unit) ->
   dropped = unit.room.find FIND_DROPPED_RESOURCES,
-                           filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY)
-  if dropped?
+                           filter: (r) => r.amount >= 200
+  if dropped.length
     target = unit.pos.findClosestByPath dropped
     if unit.pickup(target) == ERR_NOT_IN_RANGE
       moveTo target, unit
   else
-    containers = unit.room.find FIND_MY_STRUCTURES,
-                                filter: (s) => s.structureType is STRUCTURE_CONTAINER
-    target = reduce containers, (max, c) => if max > c then max else c
-    if target?
+    containers = unit.room.find FIND_STRUCTURES,
+                                filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
+                                               s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
+    if containers.length
+      target = unit.pos.findClosestByPath containers
       if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
         moveTo target, unit
 

@@ -31,7 +31,8 @@ build = (unit) ->
   return false
 
 collect = (unit) ->
-  dropped = unit.room.find FIND_DROPPED_RESOURCES
+  dropped = unit.room.find FIND_DROPPED_RESOURCES,
+                           filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY)
   if dropped?
     target = unit.pos.findClosestByPath dropped
     if unit.pickup(target) == ERR_NOT_IN_RANGE

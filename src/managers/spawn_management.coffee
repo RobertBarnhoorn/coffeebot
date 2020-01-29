@@ -22,7 +22,17 @@ populationControl = ->
   actual[v] = 0 for v in values roles
   merge actual, countBy(units, 'memory.role')
   # Filter out roles that are at desired capacity
-  candidates = (role for role,count of actual when count < desired role)
+  candidates = []
+  for role,count of actual
+    if count < desired role
+      candidates.push role
+    else
+      for _,unit of units
+        console.log unit.ticksToLive
+        if unit.memory.role == role and unit.ticksToLive < 300 and not unit.memory.replaced?
+         candidates.push role
+         unit.memory.replaced = true
+
   choice = undefined
   for role in priorities
     if role in candidates

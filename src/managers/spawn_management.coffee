@@ -10,7 +10,7 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER
 desired = (role) ->
   switch role
     when roles.HARVESTER then 2
-    when roles.UPGRADER then 6
+    when roles.UPGRADER then 4
     when roles.ENGINEER then 2
     when roles.TRANSPORTER then 2
     else 0
@@ -28,7 +28,7 @@ populationControl = ->
       candidates.push role
     else
       for _,unit of units
-        if unit.memory.role == role and unit.ticksToLive < 300 and not unit.memory.replaced?
+        if unit.memory.role == role and unit.ticksToLive < 100 and not unit.memory.replaced?
          candidates.push role
          unit.memory.replaced = true
 

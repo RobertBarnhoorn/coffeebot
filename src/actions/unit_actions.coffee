@@ -32,7 +32,7 @@ build = (unit) ->
 
 collect = (unit) ->
   dropped = unit.room.find FIND_DROPPED_RESOURCES,
-                           filter: (r) => r.amount >= 200
+                           filter: (r) => r.amount >= 50
   if dropped.length
     target = unit.pos.findClosestByPath dropped
     if unit.pickup(target) == ERR_NOT_IN_RANGE
@@ -41,6 +41,7 @@ collect = (unit) ->
     containers = unit.room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
                                                s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
+
     if containers.length
       target = unit.pos.findClosestByPath containers
       if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
@@ -48,10 +49,10 @@ collect = (unit) ->
 
 repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.hits < s.hitsMax and s.hits < 5000 and \
+                              filter: (s) => s.hits < s.hitsMax and s.hits < 2000 and \
                                              s.structureType isnt STRUCTURE_WALL
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
-                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
+                                                .slice(0, 3)
   if target?
     if unit.repair(target) == ERR_NOT_IN_RANGE
       moveTo target, unit
@@ -63,7 +64,7 @@ repairStructureNonUrgent = (unit) ->
                               filter: (s) => s.hits < s.hitsMax
 
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
-                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
+                                                .slice(0, 3)
   if target?
     if unit.repair(target) == ERR_NOT_IN_RANGE
       moveTo target, unit

@@ -1,7 +1,7 @@
 { upgrade, harvest, transfer,
   build, repairStructureUrgent, repairStructureNonUrgent,
   refillTower, shouldWork, moveTo,
-  collect } = require 'unit_actions'
+  collect, distribute } = require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit
@@ -11,7 +11,7 @@ transporter = (unit) ->
   if unit.memory.working
     transfer unit
   else
-    collect unit
+    distribute unit
 
 upgrader = (unit) ->
   unit.memory.working = shouldWork unit

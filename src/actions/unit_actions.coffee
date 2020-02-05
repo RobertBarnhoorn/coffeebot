@@ -11,16 +11,12 @@ harvest = (unit) ->
     moveTo source, unit
 
 transfer = (unit) ->
-  if unit.room.energyAvailable < unit.room.energyCapacityAvailable
-    structure = unit.pos.findClosestByPath \
-                  FIND_MY_STRUCTURES,
-                  filter: (s) => (s.energy < s.energyCapacity and
-                                 (s.structureType is STRUCTURE_SPAWN or
-                                  s.structureType is STRUCTURE_EXTENSION))
-                                  
-    if structure?
-      if unit.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-        moveTo structure, unit
+  structure = findStructure unit, [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
+  if not structure?
+    structure = unit.room.storage
+  if structure?
+    if unit.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+      moveTo structure, unit
 
 build = (unit) ->
   site = unit.pos.findClosestByPath FIND_MY_CONSTRUCTION_SITES
@@ -30,9 +26,10 @@ build = (unit) ->
     return true
   return false
 
-collect = (unit) ->
+distribute = (unit) ->
   dropped = unit.room.find FIND_DROPPED_RESOURCES,
-                           filter: (r) => r.amount >= 50
+                           filter: (r) => r.amount >= 25 and \
+                                          r.resourceType is RESOURCE_ENERGY
   if dropped.length
     target = unit.pos.findClosestByPath dropped
     if unit.pickup(target) == ERR_NOT_IN_RANGE
@@ -40,12 +37,23 @@ collect = (unit) ->
   else
     containers = unit.room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
-                                               s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
-
+                                s.store[RESOURCE_ENERGY] >= 25
     if containers.length
       target = unit.pos.findClosestByPath containers
       if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
         moveTo target, unit
+
+
+collect = (unit) ->
+  stores = unit.room.find FIND_STRUCTURES,
+                          filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
+                                          s.structureType is STRUCTURE_STORAGE) and \
+                                          s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
+
+  if stores.length
+    target = unit.pos.findClosestByPath stores
+    if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+      moveTo target, unit
 
 repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
@@ -82,12 +90,17 @@ refillTower = (unit) ->
   return false
 
 shouldWork = (unit) ->
-  if unit.carry.energy is 0 and unit.memory.working
-    false
-  else if unit.carry.energy is unit.carryCapacity and not unit.memory.working
+  if unit.store.getFreeCapacity() is 0
     true
+  else if unit.store.getFreeCapacity() is unit.store.getCapacity()
+    false
   else
     unit.memory.working
+
+findStructure = (unit, structureTypes) ->
+  unit.pos.findClosestByPath FIND_MY_STRUCTURES,
+                             filter: (s) => s.energy < s.energyCapacity and \
+                                            s.structureType in structureTypes
 
 moveTo = (location, unit) ->
   result = unit.moveTo location, reusePath: 0, maxRooms: 1, visualizePathStyle:
@@ -99,4 +112,4 @@ moveTo = (location, unit) ->
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
-                   refillTower, shouldWork, moveTo, collect }
+                   refillTower, shouldWork, moveTo, collect, distribute }

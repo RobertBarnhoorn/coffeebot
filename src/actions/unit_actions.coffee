@@ -26,29 +26,30 @@ build = (unit) ->
     return true
   return false
 
-distribute = (unit) ->
+collect = (unit) ->
   dropped = unit.room.find FIND_DROPPED_RESOURCES,
-                           filter: (r) => r.amount >= 25 and \
+                           filter: (r) => r.amount >= 100 and \
                                           r.resourceType is RESOURCE_ENERGY
   if dropped.length
     target = unit.pos.findClosestByPath dropped
     if unit.pickup(target) == ERR_NOT_IN_RANGE
       moveTo target, unit
+      return true
   else
     containers = unit.room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
-                                s.store[RESOURCE_ENERGY] >= 25
+                                s.store[RESOURCE_ENERGY] >= 100
     if containers.length
       target = unit.pos.findClosestByPath containers
       if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
         moveTo target, unit
+        return true
 
-
-collect = (unit) ->
+resupply = (unit) ->
   stores = unit.room.find FIND_STRUCTURES,
                           filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
                                           s.structureType is STRUCTURE_STORAGE) and \
-                                          s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
+                                          s.store[RESOURCE_ENERGY] >= 100
 
   if stores.length
     target = unit.pos.findClosestByPath stores
@@ -112,4 +113,4 @@ moveTo = (location, unit) ->
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
-                   refillTower, shouldWork, moveTo, collect, distribute }
+                   refillTower, shouldWork, moveTo, resupply, collect }

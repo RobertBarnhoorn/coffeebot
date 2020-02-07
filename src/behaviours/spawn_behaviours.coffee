@@ -10,9 +10,11 @@ generateUnit = (s, role) ->
   switch role
     when roles.HARVESTER then spawnHarvester s
     when roles.TRANSPORTER then spawnTransporter s
-    else spawnBalancedUnit s, role
+    when roles.UPGRADER then spawnUpgrader s
+    when roles.ENGINEER then spawnEngineer s
 
-spawnBalancedUnit = (s, role) ->
+spawnEngineer = (s) ->
+  role = roles.ENGINEER
   energy = maxEnergy(s)
   body = []
   loop
@@ -49,6 +51,18 @@ spawnTransporter = (s) ->
     break if energy < minEnergy(s)
 
   spawnUnit(s, role, body) if body.length >= 2
+
+spawnUpgrader = (s) ->
+  role = roles.UPGRADER
+  energy = maxEnergy(s)
+  body = []
+  energy = putBodyPart(s, body, MOVE, energy)
+  energy = putBodyPart(s, body, CARRY, energy)
+  loop
+    energy = putBodyPart(s, body, WORK, energy)
+    break if energy < minEnergy(s) or body.length >= 12
+
+  spawnUnit(s, role, body) if body.length >= 3
 
 putBodyPart = (s, body, part, energy) ->
   energy -= BODYPART_COST[part]

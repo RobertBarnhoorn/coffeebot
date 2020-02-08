@@ -1,11 +1,11 @@
-{ countBy, merge, values } = require 'lodash'
+{ countBy, filter, merge, values } = require 'lodash'
 { memExists, readMem } = require 'memory'
 { roles } = require 'unit_roles'
 { units } = require 'units'
 { upgrade, harvest, transfer,
   build, repairStructureUrgent, repairStructureNonUrgent,
   refillTower, shouldWork, moveTo,
-  resupply, collect, invade } = require 'unit_actions'
+  resupply, collect, soldierInvade, healerInvade } = require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit
@@ -34,12 +34,20 @@ engineer = (unit) ->
 
 soldier = (unit) ->
   if unit.memory.attacking
-    invade unit
+    soldierInvade unit
   else
-    actual = {}
-    actual[v] = 0 for v in values roles
-    merge actual, countBy(units, 'memory.role')
-    if actual[roles.SOLDIER] >= 5
-      unit.memory.attacking = true
+    unit.memory.attacking = shouldInvade()
 
-module.exports = { harvester, upgrader, engineer, transporter, soldier }
+healer = (unit) ->
+  if unit.memory.attacking
+    healerInvade unit
+  else
+    unit.memory.attacking = shouldInvade()
+
+shouldInvade =->
+  actual = {}
+  actual[v] = 0 for v in values roles
+  merge actual, countBy(filter(units, (u) => not u.spawning), 'memory.role')
+  actual[roles.HEALER] + actual[roles.SOLDIER] >= 5
+
+module.exports = { harvester, upgrader, engineer, transporter, soldier, healer }

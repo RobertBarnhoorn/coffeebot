@@ -5,7 +5,7 @@
 { generateUnit } = require 'spawn_behaviours'
 
 SPAWN = 'Spawn1'
-priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER, roles.SOLDIER]
+priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER, roles.SOLDIER, roles.HEALER]
 
 desired = (role) ->
   switch role
@@ -14,7 +14,9 @@ desired = (role) ->
     when roles.ENGINEER then 2
     when roles.TRANSPORTER then 2
     when roles.SOLDIER
-      if (memExists 'enemyRoom') then 100 else 0
+      if (memExists 'enemyRoom') then 3 else 0
+    when roles.HEALER
+      if (memExists 'enemyRoom') then 2 else 0
 
 populationControl = ->
   # Count the actual populations by role

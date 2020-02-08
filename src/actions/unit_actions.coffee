@@ -92,13 +92,21 @@ refillTower = (unit) ->
     return true
   return false
 
-invade = (unit) ->
+soldierInvade = (unit) ->
   targetRoom = readMem 'enemyRoom'
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit
   else
     attackUnit(unit) or attackStructure(unit)
+
+healerInvade = (unit) ->
+  targetRoom = readMem 'enemyRoom'
+  if unit.room.name isnt targetRoom
+    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
+    moveTo exit, unit
+  else
+    heal unit
 
 attackUnit = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS
@@ -113,6 +121,16 @@ attackStructure = (unit) ->
   if target?
     moveTo target, unit
     unit.attack target
+    return true
+  return false
+
+heal = (unit) ->
+  injured = unit.room.find FIND_MY_CREEPS,
+                           filter: (u) => u.hits < u.hitsMax
+  if injured.length
+    target = injured.sort((a, b) => a.hits - b.hits)[0]
+    moveTo target, unit
+    unit.heal target
     return true
   return false
 
@@ -139,4 +157,4 @@ moveTo = (location, unit) ->
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
-                   refillTower, shouldWork, moveTo, resupply, collect, invade }
+                   refillTower, shouldWork, moveTo, resupply, collect, soldierInvade, healerInvade }

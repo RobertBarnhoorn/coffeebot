@@ -13,6 +13,7 @@ generateUnit = (s, role) ->
     when roles.UPGRADER then spawnUpgrader s
     when roles.ENGINEER then spawnEngineer s
     when roles.SOLDIER then spawnSoldier s
+    when roles.HEALER then spawnHealer s
 
 spawnEngineer = (s) ->
   role = roles.ENGINEER
@@ -90,7 +91,22 @@ spawnSoldier = (s) ->
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 5
+  spawnUnit(s, role, body, memory)
+
+spawnHealer = (s) ->
+  role = roles.HEALER
+  energy = maxEnergy(s)
+  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          MOVE, MOVE, MOVE, MOVE, MOVE, HEAL, HEAL, HEAL, HEAL, HEAL]
+
+  memory =
+    role: role
+    working: false
+
+  spawnUnit(s, role, body, memory)
 
 putBodyPart = (s, body, part, energy) ->
   energy -= BODYPART_COST[part]

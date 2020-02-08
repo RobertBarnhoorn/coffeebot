@@ -1,3 +1,7 @@
+{ countBy, merge, values } = require 'lodash'
+{ memExists, readMem } = require 'memory'
+{ roles } = require 'unit_roles'
+{ units } = require 'units'
 { upgrade, harvest, transfer,
   build, repairStructureUrgent, repairStructureNonUrgent,
   refillTower, shouldWork, moveTo,
@@ -29,6 +33,13 @@ engineer = (unit) ->
     resupply unit
 
 soldier = (unit) ->
-  invade unit
+  if unit.memory.attacking
+    invade unit
+  else
+    actual = {}
+    actual[v] = 0 for v in values roles
+    merge actual, countBy(units, 'memory.role')
+    if actual[roles.SOLDIER] >= 5
+      unit.memory.attacking = true
 
 module.exports = { harvester, upgrader, engineer, transporter, soldier }

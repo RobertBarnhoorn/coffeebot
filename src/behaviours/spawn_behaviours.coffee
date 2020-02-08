@@ -12,6 +12,7 @@ generateUnit = (s, role) ->
     when roles.TRANSPORTER then spawnTransporter s
     when roles.UPGRADER then spawnUpgrader s
     when roles.ENGINEER then spawnEngineer s
+    when roles.SOLDIER then spawnSoldier s
 
 spawnEngineer = (s) ->
   role = roles.ENGINEER
@@ -25,7 +26,10 @@ spawnEngineer = (s) ->
     energy = putBodyPart(s, body, CARRY, energy)
     break if energy < minEnergy(s)
 
-  spawnUnit(s, role, body) if body.length >= 3
+  memory =
+    role: role
+    working: false
+  spawnUnit(s, role, body, memory) if body.length >= 3
 
 spawnHarvester = (s) ->
   role = roles.HARVESTER
@@ -36,7 +40,10 @@ spawnHarvester = (s) ->
     energy = putBodyPart(s, body, WORK, energy)
     break if energy < minEnergy(s) or body.length > 5
 
-  spawnUnit(s, role, body) if body.length >= 2
+  memory =
+    role: role
+    working: false
+  spawnUnit(s, role, body, memory) if body.length >= 2
 
 spawnTransporter = (s) ->
   role = roles.TRANSPORTER
@@ -50,7 +57,10 @@ spawnTransporter = (s) ->
     energy = putBodyPart(s, body, CARRY, energy)
     break if energy < minEnergy(s)
 
-  spawnUnit(s, role, body) if body.length >= 2
+  memory =
+    role: role
+    working: false
+  spawnUnit(s, role, body, memory) if body.length >= 2
 
 spawnUpgrader = (s) ->
   role = roles.UPGRADER
@@ -62,7 +72,25 @@ spawnUpgrader = (s) ->
     energy = putBodyPart(s, body, WORK, energy)
     break if energy < minEnergy(s) or body.length >= 12
 
-  spawnUnit(s, role, body) if body.length >= 3
+  memory =
+    role: role
+    working: false
+  spawnUnit(s, role, body, memory) if body.length >= 3
+
+spawnSoldier = (s) ->
+  role = roles.SOLDIER
+  energy = maxEnergy(s)
+  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
+
+  memory =
+    role: role
+    working: false
+
+  spawnUnit(s, role, body, memory) if body.length >= 5
 
 putBodyPart = (s, body, part, energy) ->
   energy -= BODYPART_COST[part]

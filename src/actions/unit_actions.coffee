@@ -1,28 +1,29 @@
 { filter, reduce } = require 'lodash'
+{ readMem } = require 'memory'
 
 upgrade = (unit) ->
   controller = unit.room.controller
-  if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
-    moveTo controller, unit
+  moveTo controller, unit
+  unit.upgradeController controller
 
 harvest = (unit) ->
   source = unit.pos.findClosestByPath FIND_SOURCES_ACTIVE
-  if unit.harvest(source) == ERR_NOT_IN_RANGE
-    moveTo source, unit
+  moveTo source, unit
+  unit.harvest source
 
 transfer = (unit) ->
   structure = findStructure unit, [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
   if not structure?
     structure = unit.room.storage
   if structure?
-    if unit.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-      moveTo structure, unit
+    moveTo structure, unit
+    unit.transfer structure, RESOURCE_ENERGY
 
 build = (unit) ->
   site = unit.pos.findClosestByPath FIND_MY_CONSTRUCTION_SITES
   if site?
-    if unit.build(site) == ERR_NOT_IN_RANGE
-      moveTo site, unit
+    moveTo site, unit
+    unit.build site
     return true
   return false
 
@@ -32,18 +33,19 @@ collect = (unit) ->
                                           r.resourceType is RESOURCE_ENERGY
   if dropped.length
     target = unit.pos.findClosestByPath dropped
-    if unit.pickup(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
-      return true
+    moveTo target, unit
+    unit.pickup target
+    return true
   else
     containers = unit.room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
                                 s.store[RESOURCE_ENERGY] >= 100
     if containers.length
       target = unit.pos.findClosestByPath containers
-      if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-        moveTo target, unit
-        return true
+      moveTo target, unit
+      unit.withdraw target, RESOURCE_ENERGY
+      return true
+    return false
 
 resupply = (unit) ->
   stores = unit.room.find FIND_STRUCTURES,
@@ -53,8 +55,8 @@ resupply = (unit) ->
 
   if stores.length
     target = unit.pos.findClosestByPath stores
-    if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-      moveTo target, unit
+    moveTo target, unit
+    unit.withdraw target, RESOURCE_ENERGY
 
 repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
@@ -63,8 +65,8 @@ repairStructureUrgent = (unit) ->
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
                                                 .slice(0, 3)
   if target?
-    if unit.repair(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
+    moveTo target, unit
+    unit.repair target
     return true
   return false
 
@@ -75,8 +77,8 @@ repairStructureNonUrgent = (unit) ->
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
                                                 .slice(0, 3)
   if target?
-    if unit.repair(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
+    moveTo target, unit
+    unit.repair target
     return true
   return false
 
@@ -85,8 +87,32 @@ refillTower = (unit) ->
                                      filter: (s) => s.structureType is STRUCTURE_TOWER and \
                                                     s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
   if tower?
-    if unit.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-      moveTo tower, unit
+    moveTo tower, unit
+    unit.transfer tower, RESOURCE_ENERGY
+    return true
+  return false
+
+invade = (unit) ->
+  targetRoom = readMem 'enemyRoom'
+  if unit.room.name isnt targetRoom
+    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
+    moveTo exit, unit
+  else
+    attackUnit(unit) or attackStructure(unit)
+
+attackUnit = (unit) ->
+  target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS
+  if target?
+    moveTo target, unit
+    unit.attack target
+    return true
+  return false
+
+attackStructure = (unit) ->
+  target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES
+  if target?
+    moveTo target, unit
+    unit.attack target
     return true
   return false
 
@@ -113,4 +139,4 @@ moveTo = (location, unit) ->
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
-                   refillTower, shouldWork, moveTo, resupply, collect }
+                   refillTower, shouldWork, moveTo, resupply, collect, invade }

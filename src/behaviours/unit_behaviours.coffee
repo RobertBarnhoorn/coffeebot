@@ -1,11 +1,10 @@
 { upgrade, harvest, transfer,
   build, repairStructureUrgent, repairStructureNonUrgent,
   refillTower, shouldWork, moveTo,
-  resupply, collect } = require 'unit_actions'
+  resupply, collect, invade } = require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit
-
 
 transporter = (unit) ->
   unit.memory.working = shouldWork unit
@@ -29,4 +28,7 @@ engineer = (unit) ->
   else
     resupply unit
 
-module.exports = { harvester, upgrader, engineer, transporter }
+soldier = (unit) ->
+  invade unit
+
+module.exports = { harvester, upgrader, engineer, transporter, soldier }

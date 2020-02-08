@@ -3,5 +3,6 @@ roles =
   HARVESTER: 'harvester'
   ENGINEER: 'engineer'
   TRANSPORTER: 'transporter'
+  SOLDIER: 'soldier'
 
 module.exports = { roles }

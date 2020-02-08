@@ -1,11 +1,11 @@
 { countBy, merge, values } = require 'lodash'
-{ readMem, writeMem } = require 'memory'
+{ memExists, readMem } = require 'memory'
 { roles } = require 'unit_roles'
 { units } = require 'units'
 { generateUnit } = require 'spawn_behaviours'
 
 SPAWN = 'Spawn1'
-priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER]
+priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER, roles.SOLDIER]
 
 desired = (role) ->
   switch role
@@ -13,8 +13,8 @@ desired = (role) ->
     when roles.UPGRADER then 1
     when roles.ENGINEER then 1
     when roles.TRANSPORTER then 2
-    else 0
-
+    when roles.SOLDIER
+      if (memExists 'enemyRoom') then 5 else 0
 
 populationControl = ->
   # Count the actual populations by role

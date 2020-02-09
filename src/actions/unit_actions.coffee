@@ -1,5 +1,4 @@
 { filter, reduce } = require 'lodash'
-{ readMem } = require 'memory'
 
 upgrade = (unit) ->
   controller = unit.room.controller
@@ -94,7 +93,7 @@ refillTower = (unit) ->
   return false
 
 claim = (unit) ->
-  targetRoom = readMem 'claimRoom'
+  targetRoom = Game.flags['claim'].room.name
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit
@@ -108,7 +107,7 @@ claim = (unit) ->
       unit.claimController controller
 
 soldierInvade = (unit) ->
-  targetRoom = readMem 'enemyRoom'
+  targetRoom = Game.flags['invade'].room.name
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit
@@ -116,7 +115,7 @@ soldierInvade = (unit) ->
     attackUnit(unit) or attackStructure(unit)
 
 healerInvade = (unit) ->
-  targetRoom = readMem 'enemyRoom'
+  targetRoom = Game.flags['invade'].room.name
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit

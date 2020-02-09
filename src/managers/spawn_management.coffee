@@ -1,5 +1,4 @@
 { countBy, merge, values } = require 'lodash'
-{ memExists, readMem } = require 'memory'
 { roles } = require 'unit_roles'
 { units } = require 'units'
 { generateUnit } = require 'spawn_behaviours'
@@ -15,11 +14,11 @@ desired = (role) ->
     when roles.ENGINEER then 2
     when roles.TRANSPORTER then 2
     when roles.CLAIMER
-      if (memExists 'claimRoom') then 1 else 0
+      if Game.flags['claim']? then 1 else 0
     when roles.SOLDIER
-      if (memExists 'enemyRoom') then 3 else 0
+      if Game.flags['invade']? then 3 else 0
     when roles.HEALER
-      if (memExists 'enemyRoom') then 3 else 0
+      if Game.flags['invade']? then 3 else 0
 
 populationControl = ->
   # Count the actual populations by role

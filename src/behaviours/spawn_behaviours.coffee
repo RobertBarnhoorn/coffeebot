@@ -12,6 +12,7 @@ generateUnit = (s, role) ->
     when roles.TRANSPORTER then spawnTransporter s
     when roles.UPGRADER then spawnUpgrader s
     when roles.ENGINEER then spawnEngineer s
+    when roles.CLAIMER then spawnClaimer s
     when roles.SOLDIER then spawnSoldier s
     when roles.HEALER then spawnHealer s
 
@@ -77,6 +78,19 @@ spawnUpgrader = (s) ->
     role: role
     working: false
   spawnUnit(s, role, body, memory) if body.length >= 3
+
+spawnClaimer = (s) ->
+  role = roles.CLAIMER
+  energy = maxEnergy(s)
+  body = []
+  loop
+    energy = putBodyPart(s, body, MOVE, energy)
+    energy = putBodyPart(s, body, CLAIM, energy)
+    break if energy < minEnergy()
+  memory =
+    role: role
+    working: false
+  spawnUnit(s, role, body, memory)
 
 spawnSoldier = (s) ->
   role = roles.SOLDIER

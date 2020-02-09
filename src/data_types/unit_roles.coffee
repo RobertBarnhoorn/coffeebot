@@ -3,6 +3,7 @@ roles =
   HARVESTER: 'harvester'
   ENGINEER: 'engineer'
   TRANSPORTER: 'transporter'
+  CLAIMER: 'claimer'
   SOLDIER: 'soldier'
   HEALER: 'healer'
 

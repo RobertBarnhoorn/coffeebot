@@ -5,7 +5,8 @@
 { generateUnit } = require 'spawn_behaviours'
 
 SPAWN = 'Spawn1'
-priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER, roles.SOLDIER, roles.HEALER]
+priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER,
+              roles.CLAIMER, roles.SOLDIER, roles.HEALER]
 
 desired = (role) ->
   switch role
@@ -13,6 +14,8 @@ desired = (role) ->
     when roles.UPGRADER then 1
     when roles.ENGINEER then 2
     when roles.TRANSPORTER then 2
+    when roles.CLAIMER
+      if (memExists 'claimRoom') then 1 else 0
     when roles.SOLDIER
       if (memExists 'enemyRoom') then 3 else 0
     when roles.HEALER

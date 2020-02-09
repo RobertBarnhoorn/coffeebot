@@ -1,6 +1,6 @@
 { roles } = require 'unit_roles'
 { units } = require 'units'
-{ harvester, upgrader, engineer, transporter, soldier, healer } = require 'unit_behaviours'
+{ harvester, upgrader, engineer, transporter, claimer, soldier, healer } = require 'unit_behaviours'
 
 unitManagement = ->
   for _,unit of units
@@ -11,5 +11,6 @@ unitManagement = ->
       when roles.TRANSPORTER then transporter unit
       when roles.SOLDIER then soldier unit
       when roles.HEALER then healer unit
+      when roles.CLAIMER then claimer unit
 
 module.exports = { unitManagement }

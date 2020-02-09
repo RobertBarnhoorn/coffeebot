@@ -92,6 +92,20 @@ refillTower = (unit) ->
     return true
   return false
 
+claim = (unit) ->
+  targetRoom = readMem 'claimRoom'
+  if unit.room.name isnt targetRoom
+    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
+    moveTo exit, unit
+  else
+    controller = Game.rooms[targetRoom].controller
+    if controller.owner.username? and controller.owner.username isnt 'MrFluffy'
+      moveTo controller, unit
+      unit.attackController controller
+    else
+      moveTo controller, unit
+      unit.claimController controller
+
 soldierInvade = (unit) ->
   targetRoom = readMem 'enemyRoom'
   if unit.room.name isnt targetRoom
@@ -118,6 +132,7 @@ attackUnit = (unit) ->
 
 attackStructure = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES
+                                      filter: (s) => s.structureType isnt STRUCTURE_CONTROLLER
   if target?
     moveTo target, unit
     unit.attack target
@@ -157,4 +172,5 @@ moveTo = (location, unit) ->
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
-                   refillTower, shouldWork, moveTo, resupply, collect, soldierInvade, healerInvade }
+                   refillTower, shouldWork, moveTo, resupply,
+                   collect, claim, soldierInvade, healerInvade }

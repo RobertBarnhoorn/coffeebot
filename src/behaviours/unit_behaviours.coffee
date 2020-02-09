@@ -48,6 +48,6 @@ shouldInvade =->
   actual = {}
   actual[v] = 0 for v in values roles
   merge actual, countBy(filter(units, (u) => not u.spawning), 'memory.role')
-  actual[roles.HEALER] + actual[roles.SOLDIER] >= 5
+  actual[roles.HEALER] + actual[roles.SOLDIER] >= 6
 
 module.exports = { harvester, upgrader, engineer, transporter, soldier, healer }

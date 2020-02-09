@@ -4,7 +4,7 @@
 
 maxEnergy = (s) -> (spawn s).room.energyAvailable
 
-minEnergy = (s) -> (spawn s).room.energyAvailable * 0.3
+minEnergy =-> 0
 
 generateUnit = (s, role) ->
   switch role
@@ -21,11 +21,11 @@ spawnEngineer = (s) ->
   body = []
   loop
     energy = putBodyPart(s, body, MOVE, energy)
-    break if energy < minEnergy(s)
+    break if energy < minEnergy()
     energy = putBodyPart(s, body, WORK, energy)
-    break if energy < minEnergy(s)
+    break if energy < minEnergy()
     energy = putBodyPart(s, body, CARRY, energy)
-    break if energy < minEnergy(s)
+    break if energy < minEnergy()
 
   memory =
     role: role
@@ -39,7 +39,7 @@ spawnHarvester = (s) ->
   energy = putBodyPart(s, body, MOVE, energy)
   loop
     energy = putBodyPart(s, body, WORK, energy)
-    break if energy < minEnergy(s) or body.length > 5
+    break if energy < minEnergy() or body.length > 5
 
   memory =
     role: role
@@ -52,11 +52,11 @@ spawnTransporter = (s) ->
   body = []
   loop
     energy = putBodyPart(s, body, MOVE, energy)
-    break if energy < minEnergy(s)
+    break if energy < minEnergy()
     energy = putBodyPart(s, body, CARRY, energy)
-    break if energy < minEnergy(s)
+    break if energy < minEnergy()
     energy = putBodyPart(s, body, CARRY, energy)
-    break if energy < minEnergy(s)
+    break if energy < minEnergy()
 
   memory =
     role: role
@@ -71,7 +71,7 @@ spawnUpgrader = (s) ->
   energy = putBodyPart(s, body, CARRY, energy)
   loop
     energy = putBodyPart(s, body, WORK, energy)
-    break if energy < minEnergy(s) or body.length >= 12
+    break if energy < minEnergy() or body.length >= 12
 
   memory =
     role: role
@@ -84,8 +84,8 @@ spawnSoldier = (s) ->
   body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
           TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
           TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE,
+          MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
 
   memory =
     role: role
@@ -99,8 +99,8 @@ spawnHealer = (s) ->
   body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
           TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
           TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          MOVE, MOVE, MOVE, MOVE, MOVE, HEAL, HEAL, HEAL, HEAL, HEAL]
+          TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE,
+          MOVE, MOVE, MOVE, MOVE, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL]
 
   memory =
     role: role
@@ -110,7 +110,7 @@ spawnHealer = (s) ->
 
 putBodyPart = (s, body, part, energy) ->
   energy -= BODYPART_COST[part]
-  body.push part unless energy < minEnergy(s)
+  body.push part unless energy < minEnergy()
   return energy
 
 module.exports = { generateUnit }

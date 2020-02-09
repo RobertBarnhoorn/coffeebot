@@ -16,7 +16,7 @@ desired = (role) ->
     when roles.SOLDIER
       if (memExists 'enemyRoom') then 3 else 0
     when roles.HEALER
-      if (memExists 'enemyRoom') then 2 else 0
+      if (memExists 'enemyRoom') then 3 else 0
 
 populationControl = ->
   # Count the actual populations by role

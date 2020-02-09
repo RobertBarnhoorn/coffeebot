@@ -60,10 +60,11 @@ resupply = (unit) ->
 
 repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.hits < s.hitsMax and s.hits < 20000 and \
-                                             s.structureType isnt STRUCTURE_WALL
-  target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
-                                                .slice(0, 3)
+                              filter: (s) => s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and \
+                                             s.hits < s.hitsMax
+
+  target = unit.pos.findClosestByPath structures.sort((a, b) => (b.hitsMax - b.hits) - (a.hitsMax - a.hits)) \
+                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
   if target?
     moveTo target, unit
     unit.repair target
@@ -75,7 +76,7 @@ repairStructureNonUrgent = (unit) ->
                               filter: (s) => s.hits < s.hitsMax
 
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
-                                                .slice(0, 3)
+                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
   if target?
     moveTo target, unit
     unit.repair target

@@ -59,9 +59,9 @@ resupply = (unit) ->
 
 repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.structureType not in [STRUCTURE_WALL] and \
-                                             (s.structureType is STRUCTURE_CONTAINER and s.hits < 50000) or \
-                                             s.hits < 2500
+                              filter: (s) => s.structureType isnt STRUCTURE_WALL and \
+                                           ((s.hits < s.hitsMax and s.hits < 2500) or
+                                            (s.structureType is STRUCTURE_CONTAINER and s.hits < 50000))
 
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
                                                 .slice(0, Math.floor(Math.sqrt(structures.length)))

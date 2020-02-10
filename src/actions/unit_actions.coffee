@@ -153,11 +153,11 @@ heal = (unit) ->
 
 shouldWork = (unit) ->
   if unit.store.getFreeCapacity() is 0
-    true
+    return true
   else if unit.store.getFreeCapacity() is unit.store.getCapacity()
-    false
+    return false
   else
-    unit.memory.working
+    return unit.memory.working
 
 findStructure = (unit, structureTypes) ->
   unit.pos.findClosestByPath FIND_MY_STRUCTURES,

@@ -81,11 +81,19 @@ spawnUpgrader = (s) ->
 
 spawnClaimer = (s) ->
   role = roles.CLAIMER
-  body = [CLAIM, MOVE]
+  energy = maxEnergy(s)
+  body = []
+  energy = putBodyPart(s, body, MOVE, energy)
+  energy = putBodyPart(s, body, ATTACK, energy)
+  energy = putBodyPart(s, body, CLAIM, energy)
+  loop
+    energy = putBodyPart(s, body, MOVE, energy)
+    energy = putBodyPart(s, body, CLAIM, energy)
+    break if energy < minEnergy()
   memory =
     role: role
     working: false
-  spawnUnit(s, role, body, memory)
+  spawnUnit(s, role, body, memory) if body.length >= 3
 
 spawnSoldier = (s) ->
   role = roles.SOLDIER

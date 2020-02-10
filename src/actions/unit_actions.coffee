@@ -2,27 +2,27 @@
 
 upgrade = (unit) ->
   controller = unit.room.controller
-  moveTo controller, unit
-  unit.upgradeController controller
+  if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
+    moveTo controller, unit
 
 harvest = (unit) ->
   source = unit.pos.findClosestByPath FIND_SOURCES_ACTIVE
-  moveTo source, unit
-  unit.harvest source
+  if unit.harvest(source) == ERR_NOT_IN_RANGE
+    moveTo source, unit
 
 transfer = (unit) ->
   structure = findStructure unit, [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
   if not structure?
     structure = unit.room.storage
   if structure?
-    moveTo structure, unit
-    unit.transfer structure, RESOURCE_ENERGY
+    if unit.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+      moveTo structure, unit
 
 build = (unit) ->
   site = unit.pos.findClosestByPath FIND_MY_CONSTRUCTION_SITES
   if site?
-    moveTo site, unit
-    unit.build site
+    if unit.build(site) == ERR_NOT_IN_RANGE
+      moveTo site, unit
     return true
   return false
 
@@ -32,8 +32,8 @@ collect = (unit) ->
                                           r.resourceType is RESOURCE_ENERGY
   if dropped.length
     target = unit.pos.findClosestByPath dropped
-    moveTo target, unit
-    unit.pickup target
+    if unit.pickup(target) == ERR_NOT_IN_RANGE
+      moveTo target, unit
     return true
   else
     containers = unit.room.find FIND_STRUCTURES,
@@ -41,8 +41,8 @@ collect = (unit) ->
                                 s.store[RESOURCE_ENERGY] >= 100
     if containers.length
       target = unit.pos.findClosestByPath containers
-      moveTo target, unit
-      unit.withdraw target, RESOURCE_ENERGY
+      if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+        moveTo target, unit
       return true
     return false
 
@@ -54,19 +54,20 @@ resupply = (unit) ->
 
   if stores.length
     target = unit.pos.findClosestByPath stores
-    moveTo target, unit
-    unit.withdraw target, RESOURCE_ENERGY
+    if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+      moveTo target, unit
 
 repairStructureUrgent = (unit) ->
   structures = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and \
-                                             s.hits < s.hitsMax
+                              filter: (s) => s.structureType not in [STRUCTURE_WALL] and \
+                                             (s.structureType is STRUCTURE_CONTAINER and s.hits < 50000) or \
+                                             s.hits < 2500
 
-  target = unit.pos.findClosestByPath structures.sort((a, b) => (b.hitsMax - b.hits) - (a.hitsMax - a.hits)) \
+  target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
                                                 .slice(0, Math.floor(Math.sqrt(structures.length)))
   if target?
-    moveTo target, unit
-    unit.repair target
+    if unit.repair(target) == ERR_NOT_IN_RANGE
+      moveTo target, unit
     return true
   return false
 
@@ -77,8 +78,8 @@ repairStructureNonUrgent = (unit) ->
   target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
                                                 .slice(0, Math.floor(Math.sqrt(structures.length)))
   if target?
-    moveTo target, unit
-    unit.repair target
+    if unit.repair(target) == ERR_NOT_IN_RANGE
+      moveTo target, unit
     return true
   return false
 
@@ -87,24 +88,25 @@ refillTower = (unit) ->
                                      filter: (s) => s.structureType is STRUCTURE_TOWER and \
                                                     s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
   if tower?
-    moveTo tower, unit
-    unit.transfer tower, RESOURCE_ENERGY
+    if unit.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+      moveTo tower, unit
     return true
   return false
 
 claim = (unit) ->
-  targetRoom = Game.flags['claim'].room.name
+  # targetRoom = Game.flags['claim'].room.name
+  targetRoom = 'W18S11'
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit
   else
     controller = Game.rooms[targetRoom].controller
     if controller.owner.username? and controller.owner.username isnt 'MrFluffy'
-      moveTo controller, unit
-      unit.attackController controller
+      if unit.attackController(controller) == ERR_NOT_IN_RANGE
+        moveTo controller, unit
     else
-      moveTo controller, unit
-      unit.claimController controller
+      if unit.claimController(controller) == ERR_NOT_IN_RANGE
+        moveTo controller, unit
 
 soldierInvade = (unit) ->
   targetRoom = Game.flags['invade'].room.name
@@ -163,12 +165,12 @@ findStructure = (unit, structureTypes) ->
                                             s.structureType in structureTypes
 
 moveTo = (location, unit) ->
-  result = unit.moveTo location, reusePath: 0, maxRooms: 1, visualizePathStyle:
-                                       fill: 'transparent',
-                                       stroke: '#ffaa00',
-                                       lineStyle: 'dashed',
-                                       strokeWidth: .15,
-                                       opacity: .1
+  unit.moveTo location, reusePath: 0, maxRooms: 1, visualizePathStyle:
+                                                     fill: 'transparent',
+                                                     stroke: '#ffaa00',
+                                                     lineStyle: 'dashed',
+                                                     strokeWidth: .15,
+                                                     opacity: .1
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,

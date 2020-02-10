@@ -94,14 +94,13 @@ refillTower = (unit) ->
   return false
 
 claim = (unit) ->
-  # targetRoom = Game.flags['claim'].room.name
-  targetRoom = 'W18S11'
+  targetRoom = Game.flags['claim'].pos.roomName
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit
   else
     controller = Game.rooms[targetRoom].controller
-    if controller.owner.username? and controller.owner.username isnt 'MrFluffy'
+    if controller.owner? and not controller.my
       if unit.attackController(controller) == ERR_NOT_IN_RANGE
         moveTo controller, unit
     else
@@ -109,7 +108,7 @@ claim = (unit) ->
         moveTo controller, unit
 
 soldierInvade = (unit) ->
-  targetRoom = Game.flags['invade'].room.name
+  targetRoom = Game.flags['invade'].pos.roomName
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit
@@ -117,7 +116,7 @@ soldierInvade = (unit) ->
     attackUnit(unit) or attackStructure(unit)
 
 medicInvade = (unit) ->
-  targetRoom = Game.flags['invade'].room.name
+  targetRoom = Game.flags['invade'].pos.roomName
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit

@@ -5,6 +5,6 @@ roles =
   TRANSPORTER: 'transporter'
   CLAIMER: 'claimer'
   SOLDIER: 'soldier'
-  HEALER: 'healer'
+  MEDIC: 'medic'
 
 module.exports = { roles }

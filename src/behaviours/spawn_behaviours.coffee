@@ -14,7 +14,7 @@ generateUnit = (s, role) ->
     when roles.ENGINEER then spawnEngineer s
     when roles.CLAIMER then spawnClaimer s
     when roles.SOLDIER then spawnSoldier s
-    when roles.HEALER then spawnHealer s
+    when roles.MEDIC then spawnMedic s
 
 spawnEngineer = (s) ->
   role = roles.ENGINEER
@@ -110,8 +110,8 @@ spawnSoldier = (s) ->
 
   spawnUnit(s, role, body, memory)
 
-spawnHealer = (s) ->
-  role = roles.HEALER
+spawnMedic = (s) ->
+  role = roles.MEDIC
   energy = maxEnergy(s)
   body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
           TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,

@@ -116,7 +116,7 @@ soldierInvade = (unit) ->
   else
     attackUnit(unit) or attackStructure(unit)
 
-healerInvade = (unit) ->
+medicInvade = (unit) ->
   targetRoom = Game.flags['invade'].room.name
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
@@ -175,4 +175,4 @@ moveTo = (location, unit) ->
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
                    refillTower, shouldWork, moveTo, resupply,
-                   collect, claim, soldierInvade, healerInvade }
+                   collect, claim, soldierInvade, medicInvade }

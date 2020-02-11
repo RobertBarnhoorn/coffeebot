@@ -93,6 +93,16 @@ refillTower = (unit) ->
     return true
   return false
 
+reserve = (unit) ->
+  targetRoom = Game.flags['reserve'].pos.roomName
+  if unit.room.name isnt targetRoom
+    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
+    moveTo exit, unit
+  else
+    controller = Game.rooms[targetRoom].controller
+    if unit.reserveController(controller) == ERR_NOT_IN_RANGE
+      moveTo controller, unit
+
 claim = (unit) ->
   targetRoom = Game.flags['claim'].pos.roomName
   if unit.room.name isnt targetRoom
@@ -174,4 +184,4 @@ moveTo = (location, unit) ->
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
                    refillTower, shouldWork, moveTo, resupply,
-                   collect, claim, soldierInvade, medicInvade }
+                   collect, claim, reserve, soldierInvade, medicInvade }

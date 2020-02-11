@@ -1,4 +1,5 @@
 { filter, reduce } = require 'lodash'
+{ roles } = require 'unit_roles'
 
 upgrade = (unit) ->
   controller = unit.room.controller
@@ -117,27 +118,23 @@ claim = (unit) ->
       if unit.claimController(controller) == ERR_NOT_IN_RANGE
         moveTo controller, unit
 
-soldierInvade = (unit) ->
+invade = (unit) ->
   targetRoom = Game.flags['invade'].pos.roomName
   if unit.room.name isnt targetRoom
     exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
     moveTo exit, unit
   else
-    attackUnit(unit) or attackStructure(unit)
-
-medicInvade = (unit) ->
-  targetRoom = Game.flags['invade'].pos.roomName
-  if unit.room.name isnt targetRoom
-    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
-    moveTo exit, unit
-  else
-    heal unit
+    switch unit.memory.role
+      when roles.MEDIC then heal unit
+      else attackUnit(unit) or attackStructure(unit)
 
 attackUnit = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS
   if target?
     moveTo target, unit
-    unit.attack target
+    switch unit.memory.role
+      when roles.SNIPER then unit.rangedAttack target
+      else unit.attack target
     return true
   return false
 
@@ -184,4 +181,4 @@ moveTo = (location, unit) ->
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,
                    refillTower, shouldWork, moveTo, resupply,
-                   collect, claim, reserve, soldierInvade, medicInvade }
+                   collect, claim, reserve, invade }

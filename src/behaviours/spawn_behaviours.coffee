@@ -28,10 +28,10 @@ spawnEngineer = (s) ->
     break if energy < minEnergy()
     energy = putBodyPart(s, body, CARRY, energy)
     break if energy < minEnergy()
-
   memory =
     role: role
     working: false
+
   spawnUnit(s, role, body, memory) if body.length >= 3
 
 spawnHarvester = (s) ->
@@ -42,10 +42,10 @@ spawnHarvester = (s) ->
   loop
     energy = putBodyPart(s, body, WORK, energy)
     break if energy < minEnergy() or body.length > 5
-
   memory =
     role: role
     working: false
+
   spawnUnit(s, role, body, memory) if body.length >= 2
 
 spawnTransporter = (s) ->
@@ -59,10 +59,10 @@ spawnTransporter = (s) ->
     break if energy < minEnergy()
     energy = putBodyPart(s, body, CARRY, energy)
     break if energy < minEnergy()
-
   memory =
     role: role
     working: false
+
   spawnUnit(s, role, body, memory) if body.length >= 2
 
 spawnUpgrader = (s) ->
@@ -74,10 +74,10 @@ spawnUpgrader = (s) ->
   loop
     energy = putBodyPart(s, body, WORK, energy)
     break if energy < minEnergy() or body.length >= 12
-
   memory =
     role: role
     working: false
+
   spawnUnit(s, role, body, memory) if body.length >= 3
 
 spawnReserver = (s) ->
@@ -91,6 +91,7 @@ spawnReserver = (s) ->
   memory =
     role: role
     working: false
+
   spawnUnit(s, role, body, memory) if body.length >= 4
 
 spawnClaimer = (s) ->
@@ -107,15 +108,27 @@ spawnClaimer = (s) ->
   memory =
     role: role
     working: false
+
   spawnUnit(s, role, body, memory) if body.length >= 3
 
 spawnSoldier = (s) ->
   role = roles.SOLDIER
   energy = maxEnergy(s)
-  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-          ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
+  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+          ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
+  memory =
+    role: role
+    working: false
 
+  spawnUnit(s, role, body, memory)
+
+spawnSniper = (s) ->
+  role = roles.SNIPER
+  energy = maxEnergy(s)
+  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+          ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
   memory =
     role: role
     working: false
@@ -125,10 +138,9 @@ spawnSoldier = (s) ->
 spawnMedic = (s) ->
   role = roles.MEDIC
   energy = maxEnergy(s)
-  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-          HEAL, HEAL, HEAL, HEAL, HEAL, HEAL]
-
+  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+          HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL]
   memory =
     role: role
     working: false

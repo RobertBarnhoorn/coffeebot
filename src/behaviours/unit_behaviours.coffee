@@ -6,7 +6,7 @@
   build, repairStructureUrgent, repairStructureNonUrgent,
   refillTower, shouldWork, moveTo,
   resupply, collect, reserve, claim,
-  soldierInvade, medicInvade } = require 'unit_actions'
+  invade } = require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit
@@ -40,13 +40,19 @@ claimer = (unit) ->
 
 soldier = (unit) ->
   if unit.memory.attacking
-    soldierInvade unit
+    invade unit
+  else
+    unit.memory.attacking = shouldInvade()
+
+sniper = (unit) ->
+  if unit.memory.attacking
+    invade unit
   else
     unit.memory.attacking = shouldInvade()
 
 medic = (unit) ->
   if unit.memory.attacking
-    medicInvade unit
+    invade unit
   else
     unit.memory.attacking = shouldInvade()
 
@@ -54,6 +60,6 @@ shouldInvade =->
   actual = {}
   actual[v] = 0 for v in values roles
   merge actual, countBy(filter(units, (u) => not u.spawning), 'memory.role')
-  actual[roles.MEDIC] + actual[roles.SOLDIER] >= 6
+  actual[roles.MEDIC] >= 3 and actual[roles.SOLDIER] >= 2 and actual[roles.SNIPER] >= 2
 
-module.exports = { harvester, upgrader, engineer, transporter, reserver, claimer, soldier, medic }
+module.exports = { harvester, upgrader, engineer, transporter, reserver, claimer, soldier, sniper, medic }

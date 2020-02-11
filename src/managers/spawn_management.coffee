@@ -5,7 +5,7 @@
 
 SPAWN = 'Spawn1'
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER,
-              roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.MEDIC]
+              roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER, roles.MEDIC]
 
 desired = (role) ->
   switch role
@@ -18,6 +18,8 @@ desired = (role) ->
     when roles.CLAIMER
       if Game.flags['claim']? then 1 else 0
     when roles.SOLDIER
+      if Game.flags['invade']? then 3 else 0
+    when roles.SNIPER
       if Game.flags['invade']? then 3 else 0
     when roles.MEDIC
       if Game.flags['invade']? then 3 else 0

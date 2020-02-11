@@ -6,6 +6,7 @@ roles =
   RESERVER: 'reserver'
   CLAIMER: 'claimer'
   SOLDIER: 'soldier'
+  SNIPER: 'sniper'
   MEDIC: 'medic'
 
 module.exports = { roles }

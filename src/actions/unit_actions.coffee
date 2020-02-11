@@ -1,102 +1,184 @@
-{ filter, reduce } = require 'lodash'
+{ any, filter, forEach, map, reduce, values } = require 'lodash'
 { roles } = require 'unit_roles'
+{ rooms } = require 'rooms'
+{ units } = require 'units'
 
 upgrade = (unit) ->
-  controller = unit.room.controller
-  if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
-    moveTo controller, unit
+  controllers = []
+  controllerLocation = undefined
+  for room in values rooms
+    if not room.controller? or not room.controller.my
+      continue
+    closest = undefined
+    minCost = 10000
+    controllerLocation = pos: room.controller.pos, range: 3
+    for u in values(units) when u.memory.role is roles.UPGRADER
+      cost = getPathCost u.pos, controllerLocation
+      if cost < minCost
+        minCost = cost
+        closest = u
+    if unit is closest
+      controllers.push(room.controller)
+
+  controllerLocations = map controllers, (c) => pos: c.pos, range: 3
+  path = getPath unit.pos, controllerLocations
+  if path.length
+    moveBy path, unit
+  else
+    unit.upgradeController unit.room.controller
 
 harvest = (unit) ->
-  source = unit.pos.findClosestByPath FIND_SOURCES_ACTIVE
-  if unit.harvest(source) == ERR_NOT_IN_RANGE
-    moveTo source, unit
+  mines = []
+  sources = []
+  for room in values rooms
+    minesFound = room.find FIND_STRUCTURES,
+                           filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
+                                          not any(s.pos.isEqualTo(u.pos) \
+                                          for u in values(units) when u isnt unit)
+    mines.push(minesFound...) if minesFound?
+
+    sourcesFound = room.find FIND_SOURCES
+    for s in sourcesFound
+      miners = s.pos.findInRange(FIND_CREEPS, 1)
+      if miners.length is 0 or (miners.length is 1 and unit in miners)
+        sources.push s
+
+  mineLocations = map mines, (m) => pos: m.pos, range: 0
+  sourceLocations = map sources, (s) => pos: s.pos, range: 1
+  path = getPath unit.pos, mineLocations.concat(sourceLocations)
+  if path.length
+    moveBy path, unit
+  else
+    unit.harvest unit.pos.findClosestByRange FIND_SOURCES_ACTIVE
 
 transfer = (unit) ->
-  structure = findStructure unit, [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
-  if not structure?
-    structure = unit.room.storage
-  if structure?
-    if unit.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-      moveTo structure, unit
-
-build = (unit) ->
-  site = unit.pos.findClosestByPath FIND_MY_CONSTRUCTION_SITES
-  if site?
-    if unit.build(site) == ERR_NOT_IN_RANGE
-      moveTo site, unit
-    return true
-  return false
+  structures = []
+  for room in values rooms
+    structuresFound = room.find FIND_MY_STRUCTURES,
+                                filter: (s) => s.energy < s.energyCapacity and \
+                                                          s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
+    if room.storage? and not structuresFound.length
+      structuresFound = [room.storage]
+    structures.push(structuresFound...) if structuresFound?
+  structureLocations = map structures, (s) => pos: s.pos, range: 1
+  path = getPath unit.pos, structureLocations
+  if path.length
+    moveBy path, unit
+  else
+    unit.transfer unit.pos.findClosestByRange(structures), RESOURCE_ENERGY
 
 collect = (unit) ->
-  dropped = unit.room.find FIND_DROPPED_RESOURCES,
-                           filter: (r) => r.amount >= 100 and \
-                                          r.resourceType is RESOURCE_ENERGY
-  if dropped.length
-    target = unit.pos.findClosestByPath dropped
-    if unit.pickup(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
-    else
-      unit.memory.working = true
-    return true
+  resources = []
+  for room in values rooms
+    resourcesFound = room.find FIND_DROPPED_RESOURCES,
+                               filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY) and \
+                                              r.resourceType is RESOURCE_ENERGY
+    resources.push(resourcesFound...) if resourcesFound?
+  if not resources.length
+    for room in values rooms
+      resourcesFound = room.find FIND_STRUCTURES,
+                                 filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
+                                 s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
+      resources.push(resourcesFound...) if resourcesFound?
+  resourceLocations = map resources, (r) => pos: r.pos, range: 1
+  path = getPath unit.pos, resourceLocations
+  if path.length > 0
+    moveBy path, unit
   else
-    containers = unit.room.find FIND_STRUCTURES,
-                                filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
-                                s.store[RESOURCE_ENERGY] >= 100
-    if containers.length
-      target = unit.pos.findClosestByPath containers
-      if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-        moveTo target, unit
-      else
-        unit.memory.working = true
-      return true
-    return false
+    target = unit.pos.findClosestByRange(resources)
+    if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
+      unit.memory.working = true
+
+build = (unit) ->
+  sites = []
+  for room in values rooms
+    sitesFound = room.find FIND_MY_CONSTRUCTION_SITES
+    sites.push(sitesFound...) if sitesFound?
+  return false if not sites.length
+  siteLocations = map sites, (s) => pos: s.pos, range: 3
+  path = getPath unit.pos, siteLocations
+  if path.length
+    moveBy path, unit
+  else
+    unit.build unit.pos.findClosestByRange sites
+  return true
 
 resupply = (unit) ->
-  stores = unit.room.find FIND_STRUCTURES,
-                          filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
-                                          s.structureType is STRUCTURE_STORAGE) and \
-                                          s.store[RESOURCE_ENERGY] >= 100
+  resources = []
+  for room in values rooms
+    droppedFound = room.find FIND_DROPPED_RESOURCES,
+                             filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY) and \
+                                            r.resourceType is RESOURCE_ENERGY
+    storesFound = room.find FIND_STRUCTURES,
+                            filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
+                                            s.structureType is STRUCTURE_STORAGE) and \
+                                            s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
+    resources.push(droppedFound...) if droppedFound?
+    resources.push(storesFound...) if storesFound?
 
-  if stores.length
-    target = unit.pos.findClosestByPath stores
-    if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-      moveTo target, unit
+  resourceLocations = map resources, (r) => pos: r.pos, range: 1
+  path = getPath unit.pos, resourceLocations
+  if path.length
+    moveBy path, unit
+  else
+    target = unit.pos.findClosestByRange resources, RESOURCE_ENERGY
+    if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
+      unit.memory.working = true
 
 repairStructureUrgent = (unit) ->
-  structures = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.structureType isnt STRUCTURE_WALL and \
-                                           ((s.hits < s.hitsMax and s.hits < 2500) or
-                                            (s.structureType is STRUCTURE_CONTAINER and s.hits < 50000))
-
-  target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
-                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
-  if target?
-    if unit.repair(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
-    return true
-  return false
+  structures = []
+  for room in values rooms
+    structuresFound = room.find FIND_STRUCTURES,
+                                filter: (s) => s.structureType isnt STRUCTURE_WALL and \
+                                             ((s.hits < s.hitsMax and s.hits < 2500) or
+                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 50000))
+    structures.push(structuresFound...) if structuresFound?
+  return false if not structures.length
+  prioritized = structures.sort((a, b) => a.hits - b.hits) \
+                          .slice(0, Math.floor(Math.sqrt(structures.length)))
+  prioritizedLocations = map prioritized, ((p) => pos: p.pos, range: 3)
+  path = getPath unit.pos, prioritizedLocations
+  if path.length
+    moveBy path, unit
+  else
+    target = unit.pos.findInRange(prioritized, 3)[0] if prioritized.length
+    unit.repair target
+  return true
 
 repairStructureNonUrgent = (unit) ->
-  structures = unit.room.find FIND_STRUCTURES,
-                              filter: (s) => s.hits < s.hitsMax
+  structures = []
+  for room in values rooms
+    structuresFound = room.find FIND_STRUCTURES,
+                                filter: (s) => s.hits < s.hitsMax
+    structures.push(structuresFound...) if structuresFound?
 
-  target = unit.pos.findClosestByPath structures.sort((a, b) => a.hits - b.hits) \
-                                                .slice(0, Math.floor(Math.sqrt(structures.length)))
-  if target?
-    if unit.repair(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
-    return true
-  return false
+  return false if not structures.length
+  prioritized = structures.sort((a, b) => a.hits - b.hits) \
+                         .slice(0, Math.floor(Math.sqrt(structures.length)))
+  prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 3
+  path = getPath unit.pos, prioritizedLocations
+  if path.length
+    moveBy path, unit
+  else
+    unit.repair unit.pos.findInRange(prioritized, 3)
+  return true
 
 refillTower = (unit) ->
-  tower = unit.pos.findClosestByPath FIND_MY_STRUCTURES,
-                                     filter: (s) => s.structureType is STRUCTURE_TOWER and \
-                                                    s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
-  if tower?
-    if unit.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
-      moveTo tower, unit
-    return true
-  return false
+  towers = []
+  for room in values rooms
+    towersFound = room.find FIND_MY_STRUCTURES,
+                            filter: (s) => s.structureType is STRUCTURE_TOWER and \
+                                           s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
+    towers.push(towersFound...) if towersFound?
+
+  return false if not towers.length
+  towerLocations = map towers, (t) => pos: t.pos, range: 1
+  path = PathFinder.search(unit.pos, towerLocations).path
+  if path.length
+    moveBy path, unit
+  else
+    unit.transfer unit.pos.findClosestByRange(towers), RESOURCE_ENERGY
+  return true
 
 reserve = (unit) ->
   targetRoom = Game.flags['reserve'].pos.roomName
@@ -169,18 +251,39 @@ shouldWork = (unit) ->
   else
     unit.memory.working
 
-findStructure = (unit, structureTypes) ->
-  unit.pos.findClosestByPath FIND_MY_STRUCTURES,
-                             filter: (s) => s.energy < s.energyCapacity and \
-                                            s.structureType in structureTypes
-
 moveTo = (location, unit) ->
-  unit.moveTo location, reusePath: 0, maxRooms: 1, visualizePathStyle:
+  unit.moveTo location, reusePath: 5, maxRooms: 1, visualizePathStyle:
                                                      fill: 'transparent',
                                                      stroke: '#ffaa00',
                                                      lineStyle: 'dashed',
                                                      strokeWidth: .15,
                                                      opacity: .1
+
+moveBy = (path, unit) ->
+  unit.moveByPath path
+
+getPath = (pos, loc) ->
+  PathFinder.search(pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix).path
+
+getPathCost = (pos, loc) ->
+  PathFinder.search(pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix).cost
+
+generateCostMatrix = (roomName) ->
+  room = Game.rooms[roomName]
+  return if not room?
+  costs = new PathFinder.CostMatrix
+
+  forEach room.find(FIND_STRUCTURES), (s) ->
+    if s.structureType is STRUCTURE_ROAD
+      costs.set s.pos.x, s.pos.y, 1
+    else if s.structureType isnt STRUCTURE_CONTAINER and
+           (s.structureType isnt STRUCTURE_RAMPART or not s.my)
+      costs.set s.pos.x, s.pos.y, 0xff
+
+  forEach room.find(FIND_CREEPS), (c) ->
+    costs.set c.pos.x, c.pos.y, 0xff
+
+  return costs
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,

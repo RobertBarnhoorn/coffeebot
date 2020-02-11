@@ -1,16 +1,16 @@
-{ countBy, merge, values } = require 'lodash'
+{ countBy, keys, merge, shuffle, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { units } = require 'units'
+{ spawns } = require 'spawns'
 { generateUnit } = require 'spawn_behaviours'
 
-SPAWN = 'Spawn1'
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER,
               roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER, roles.MEDIC]
 
 desired = (role) ->
   switch role
-    when roles.HARVESTER then 2
-    when roles.UPGRADER then 1
+    when roles.HARVESTER then 4
+    when roles.UPGRADER then 2
     when roles.ENGINEER then 2
     when roles.TRANSPORTER then 2
     when roles.RESERVER
@@ -46,6 +46,10 @@ populationControl = ->
       choice = role
       break
 
-  generateUnit(SPAWN, choice) if choice?
+  if choice?
+    for spawn in shuffle keys(spawns)
+      if generateUnit(spawn, choice) == OK
+        break
+
 
 module.exports = { populationControl }

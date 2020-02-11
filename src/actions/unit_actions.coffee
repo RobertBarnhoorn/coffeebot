@@ -35,6 +35,8 @@ collect = (unit) ->
     target = unit.pos.findClosestByPath dropped
     if unit.pickup(target) == ERR_NOT_IN_RANGE
       moveTo target, unit
+    else
+      unit.memory.working = true
     return true
   else
     containers = unit.room.find FIND_STRUCTURES,
@@ -44,6 +46,8 @@ collect = (unit) ->
       target = unit.pos.findClosestByPath containers
       if unit.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
         moveTo target, unit
+      else
+        unit.memory.working = true
       return true
     return false
 
@@ -159,11 +163,11 @@ heal = (unit) ->
 
 shouldWork = (unit) ->
   if unit.store.getFreeCapacity() is 0
-    return true
+    true
   else if unit.store.getFreeCapacity() is unit.store.getCapacity()
-    return false
+    false
   else
-    return unit.memory.working
+    unit.memory.working
 
 findStructure = (unit, structureTypes) ->
   unit.pos.findClosestByPath FIND_MY_STRUCTURES,

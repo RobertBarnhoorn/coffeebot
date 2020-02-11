@@ -142,7 +142,7 @@ attackUnit = (unit) ->
   return false
 
 attackStructure = (unit) ->
-  target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES
+  target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES,
                                       filter: (s) => s.structureType isnt STRUCTURE_CONTROLLER
   if target?
     moveTo target, unit

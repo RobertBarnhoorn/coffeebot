@@ -11,7 +11,7 @@ upgrade = (unit) ->
       continue
     closest = undefined
     minCost = 10000
-    controllerLocation = pos: room.controller.pos, range: 3
+    controllerLocation = pos: room.controller.pos, range: 1
     for u in values(units) when u.memory.role is roles.UPGRADER
       cost = getPathCost u.pos, controllerLocation
       if cost < minCost
@@ -142,7 +142,7 @@ repairStructureUrgent = (unit) ->
   if path.length
     moveBy path, unit
   else
-    unit.repair unit.pos.findInRange(prioritized, 3)[0] if prioritized.length
+    unit.repair unit.pos.findInRange(prioritized, 3)[0]
   return true
 
 repairStructureNonUrgent = (unit) ->
@@ -160,7 +160,7 @@ repairStructureNonUrgent = (unit) ->
   if path.length
     moveBy path, unit
   else
-    unit.repair unit.pos.findInRange(prioritized, 3)[0] if prioritized.length
+    unit.repair unit.pos.findInRange(prioritized, 3)[0]
   return true
 
 refillTower = (unit) ->

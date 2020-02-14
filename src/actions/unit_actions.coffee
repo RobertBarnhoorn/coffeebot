@@ -1,4 +1,5 @@
 { any, filter, forEach, map, reduce, values } = require 'lodash'
+{ minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { units } = require 'units'
@@ -47,11 +48,16 @@ harvest = (unit) ->
 
   mineLocations = map mines, (m) => pos: m.pos, range: 0
   sourceLocations = map sources, (s) => pos: s.pos, range: 1
-  path = getPath unit.pos, mineLocations.concat(sourceLocations)
-  if path.length
-    moveBy path, unit
+  resourceLocations = mineLocations.concat sourceLocations
+  if resourceLocations.length
+    path = getPath unit.pos, resourceLocations
+    if path.length
+      moveBy path, unit
+    else
+      unit.harvest unit.pos.findClosestByRange FIND_SOURCES_ACTIVE
   else
-    unit.harvest unit.pos.findClosestByRange FIND_SOURCES_ACTIVE
+    expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER), 'ticksToLive'
+    moveTo expiringHarvester, unit
 
 transfer = (unit) ->
   structures = []

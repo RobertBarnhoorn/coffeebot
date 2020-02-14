@@ -40,7 +40,8 @@ harvest = (unit) ->
                                           for u in values(units) when u isnt unit)
     mines.push(minesFound...) if minesFound?
 
-    sourcesFound = room.find FIND_SOURCES
+    sourcesFound = room.find FIND_SOURCES,
+                             filter: (s) => not any(s.pos.inRangeTo(m.pos, 1) for m in minesFound)
     for s in sourcesFound
       miners = filter s.pos.findInRange(FIND_CREEPS, 1), (u) => u.memory.role is roles.HARVESTER
       if miners.length is 0 or (miners.length is 1 and unit in miners)
@@ -57,7 +58,7 @@ harvest = (unit) ->
       unit.harvest unit.pos.findClosestByRange FIND_SOURCES_ACTIVE
   else
     expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER), 'ticksToLive'
-    moveTo expiringHarvester, unit
+    moveTo expiringHarvester, unit if expiringHarvester?
 
 transfer = (unit) ->
   structures = []
@@ -137,18 +138,16 @@ repairStructureUrgent = (unit) ->
   for room in values rooms
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
-                                             ((s.hits < s.hitsMax and s.hits < 2500) or
+                                             ((s.hits < s.hitsMax and s.hits < 1500) or
                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 50000))
     structures.push(structuresFound...) if structuresFound?
   return false if not structures.length
-  prioritized = structures.sort((a, b) => a.hits - b.hits) \
-                          .slice(0, Math.floor(Math.sqrt(structures.length)))
-  prioritizedLocations = map prioritized, ((p) => pos: p.pos, range: 3)
-  path = getPath unit.pos, prioritizedLocations
+  structureLocations = map structures, ((s) => pos: s.pos, range: 3)
+  path = getPath unit.pos, structureLocations
   if path.length
     moveBy path, unit
   else
-    unit.repair unit.pos.findInRange(prioritized, 3)[0]
+    unit.repair unit.pos.findInRange(structures, 3)[0]
   return true
 
 repairStructureNonUrgent = (unit) ->

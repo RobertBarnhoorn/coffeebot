@@ -9,20 +9,20 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER
 
 desired = (role) ->
   switch role
-    when roles.HARVESTER then 4
-    when roles.UPGRADER then 2
-    when roles.ENGINEER then 2
-    when roles.TRANSPORTER then 4
+    when roles.HARVESTER        then 4
+    when roles.UPGRADER         then 2
+    when roles.ENGINEER         then 4
+    when roles.TRANSPORTER      then 4
     when roles.RESERVER
       if Game.flags['reserve']? then 1 else 0
     when roles.CLAIMER
-      if Game.flags['claim']? then 1 else 0
+      if Game.flags['claim']?   then 1 else 0
     when roles.SOLDIER
-      if Game.flags['invade']? then 3 else 0
+      if Game.flags['invade']?  then 3 else 0
     when roles.SNIPER
-      if Game.flags['invade']? then 3 else 0
+      if Game.flags['invade']?  then 3 else 0
     when roles.MEDIC
-      if Game.flags['invade']? then 3 else 0
+      if Game.flags['invade']?  then 3 else 0
 
 populationControl = ->
   # Count the actual populations by role
@@ -36,7 +36,7 @@ populationControl = ->
       candidates.push role
     else
       for _,unit of units
-        if unit.memory.role == role and unit.ticksToLive < 100 and not unit.memory.replaced?
+        if unit.memory.role == role and unit.ticksToLive < 25 and not unit.memory.replaced?
          candidates.push role
          unit.memory.replaced = true
 

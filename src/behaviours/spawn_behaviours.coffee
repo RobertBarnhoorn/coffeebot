@@ -40,11 +40,13 @@ spawnHarvester = (s) ->
   body = []
   loop
     energy = putBodyPart(s, body, MOVE, energy)
-    break if energy < minEnergy() or body.length >= 8
+    break if energy < minEnergy() or body.length >= 7
     energy = putBodyPart(s, body, WORK, energy)
-    break if energy < minEnergy() or body.length >= 8
+    break if energy < minEnergy() or body.length >= 7
     energy = putBodyPart(s, body, WORK, energy)
-    break if energy < minEnergy() or body.length >= 8
+    break if energy < minEnergy() or body.length >= 7
+    energy = putBodyPart(s, body, WORK, energy)
+    break if energy < minEnergy() or body.length >= 7
   memory =
     role: role
     working: false

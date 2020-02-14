@@ -1,7 +1,7 @@
 COMPILE=coffee --bare
 DELETE=rm -rf
 CREATE=mkdir
-TOP_DIR=~/workplace/coffeescreeps
+TOP_DIR=~/workplace/coffeebot
 SRC_DIR=$(TOP_DIR)/src
 BUILD_DIR=$(TOP_DIR)/build
 TOOL_DIR=$(TOP_DIR)/tools

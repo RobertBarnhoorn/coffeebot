@@ -38,15 +38,18 @@ spawnHarvester = (s) ->
   role = roles.HARVESTER
   energy = maxEnergy(s)
   body = []
-  energy = putBodyPart(s, body, MOVE, energy)
   loop
+    energy = putBodyPart(s, body, MOVE, energy)
+    break if energy < minEnergy() or body.length >= 8
     energy = putBodyPart(s, body, WORK, energy)
-    break if energy < minEnergy() or body.length > 5
+    break if energy < minEnergy() or body.length >= 8
+    energy = putBodyPart(s, body, WORK, energy)
+    break if energy < minEnergy() or body.length >= 8
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 2
+  spawnUnit(s, role, body, memory) if body.length >= 3
 
 spawnTransporter = (s) ->
   role = roles.TRANSPORTER

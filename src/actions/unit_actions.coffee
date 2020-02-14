@@ -179,7 +179,7 @@ refillTower = (unit) ->
 
   return false if not towers.length
   towerLocations = map towers, (t) => pos: t.pos, range: 1
-  path = PathFinder.search(unit.pos, towerLocations).path
+  path = getPath unit.pos, towerLocations
   if path.length
     moveBy path, unit
   else

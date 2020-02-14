@@ -20,6 +20,8 @@ upgrade = (unit) ->
     if unit is closest
       controllers.push(room.controller)
 
+  if not controllers.length
+    controllers = [unit.room.controller]
   controllerLocations = map controllers, (c) => pos: c.pos, range: 3
   path = getPath unit.pos, controllerLocations
   if path.length
@@ -39,7 +41,7 @@ harvest = (unit) ->
 
     sourcesFound = room.find FIND_SOURCES
     for s in sourcesFound
-      miners = s.pos.findInRange(FIND_CREEPS, 1)
+      miners = filter s.pos.findInRange(FIND_CREEPS, 1), (u) => u.memory.role is roles.HARVESTER
       if miners.length is 0 or (miners.length is 1 and unit in miners)
         sources.push s
 
@@ -71,21 +73,20 @@ collect = (unit) ->
   resources = []
   for room in values rooms
     resourcesFound = room.find FIND_DROPPED_RESOURCES,
-                               filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY) and \
-                                              r.resourceType is RESOURCE_ENERGY
+                               filter: (r) => r.resourceType is RESOURCE_ENERGY
+    containersFound = room.find FIND_STRUCTURES,
+                                filter: (s) => s.structureType is STRUCTURE_CONTAINER
     resources.push(resourcesFound...) if resourcesFound?
-  if not resources.length
-    for room in values rooms
-      resourcesFound = room.find FIND_STRUCTURES,
-                                 filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
-                                 s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
-      resources.push(resourcesFound...) if resourcesFound?
-  resourceLocations = map resources, (r) => pos: r.pos, range: 1
-  path = getPath unit.pos, resourceLocations
+    resources.push(containersFound...) if containersFound?
+  prioritized = resources.sort((a, b) => (if b.amount? then b.amount else b.store[RESOURCE_ENERGY]) - \
+                                         (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
+                         .slice(0, Math.floor(Math.sqrt(resources.length)))
+  prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
+  path = getPath unit.pos, prioritizedLocations
   if path.length > 0
     moveBy path, unit
   else
-    target = unit.pos.findClosestByRange(resources)
+    target = unit.pos.findClosestByRange(prioritized)
     if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
       unit.memory.working = true
 
@@ -141,8 +142,7 @@ repairStructureUrgent = (unit) ->
   if path.length
     moveBy path, unit
   else
-    target = unit.pos.findInRange(prioritized, 3)[0] if prioritized.length
-    unit.repair target
+    unit.repair unit.pos.findInRange(prioritized, 3)[0] if prioritized.length
   return true
 
 repairStructureNonUrgent = (unit) ->
@@ -160,7 +160,7 @@ repairStructureNonUrgent = (unit) ->
   if path.length
     moveBy path, unit
   else
-    unit.repair unit.pos.findInRange(prioritized, 3)
+    unit.repair unit.pos.findInRange(prioritized, 3)[0] if prioritized.length
   return true
 
 refillTower = (unit) ->
@@ -278,6 +278,12 @@ generateCostMatrix = (roomName) ->
       costs.set s.pos.x, s.pos.y, 1
     else if s.structureType isnt STRUCTURE_CONTAINER and
            (s.structureType isnt STRUCTURE_RAMPART or not s.my)
+      costs.set s.pos.x, s.pos.y, 0xff
+
+  forEach room.find(FIND_CONSTRUCTION_SITES), (s) ->
+    if s.structureType isnt STRUCTURE_ROAD and \
+       s.structureType isnt STRUCTURE_CONTAINER and \
+      (s.structureType isnt STRUCTURE_RAMPART or not s.my)
       costs.set s.pos.x, s.pos.y, 0xff
 
   forEach room.find(FIND_CREEPS), (c) ->

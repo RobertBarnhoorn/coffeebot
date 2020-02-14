@@ -69,11 +69,13 @@ spawnUpgrader = (s) ->
   role = roles.UPGRADER
   energy = maxEnergy(s)
   body = []
-  energy = putBodyPart(s, body, MOVE, energy)
-  energy = putBodyPart(s, body, CARRY, energy)
   loop
+    energy = putBodyPart(s, body, MOVE, energy)
+    break if energy < minEnergy()
+    energy = putBodyPart(s, body, CARRY, energy)
+    break if energy < minEnergy()
     energy = putBodyPart(s, body, WORK, energy)
-    break if energy < minEnergy() or body.length >= 12
+    break if energy < minEnergy()
   memory =
     role: role
     working: false

@@ -10,7 +10,7 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER
 desired = (role) ->
   switch role
     when roles.HARVESTER        then 4
-    when roles.UPGRADER         then 2
+    when roles.UPGRADER         then 4
     when roles.ENGINEER         then 4
     when roles.TRANSPORTER      then 4
     when roles.RESERVER

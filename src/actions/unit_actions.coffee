@@ -147,7 +147,12 @@ repairStructureUrgent = (unit) ->
   if path.length
     moveBy path, unit
   else
-    unit.repair unit.pos.findInRange(structures, 3)[0]
+    if prioritized.length
+      unit.repair unit.pos.findInRange(prioritized, 3)[0]
+    else
+      prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
+      path = getPath unit.pos, prioritizedLocations
+      moveBy path, unit
   return true
 
 repairStructureNonUrgent = (unit) ->
@@ -165,7 +170,12 @@ repairStructureNonUrgent = (unit) ->
   if path.length
     moveBy path, unit
   else
-    unit.repair unit.pos.findInRange(prioritized, 3)[0]
+    if prioritized.length
+      unit.repair unit.pos.findInRange(prioritized, 3)[0]
+    else
+      prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
+      path = getPath unit.pos, prioritizedLocations
+      moveBy path, unit
   return true
 
 refillTower = (unit) ->

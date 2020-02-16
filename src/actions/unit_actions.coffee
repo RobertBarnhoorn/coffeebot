@@ -5,30 +5,28 @@
 { units } = require 'units'
 
 upgrade = (unit) ->
-  controllers = []
-  controllerLocation = undefined
+  unit.memory.target or= getUpgradeTarget unit
+  controller = Game.getObjectById(unit.memory.target)
+  if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
+    targetLocation = pos: controller.pos, range: 3
+    path = getPath unit.pos, targetLocation
+    moveBy path, unit
+
+getUpgradeTarget = (unit) ->
   for room in values rooms
     if not room.controller? or not room.controller.my
       continue
-    closest = undefined
-    minCost = 10000
+    closestUnit = undefined
+    minCost = 100000
     controllerLocation = pos: room.controller.pos, range: 1
     for u in values(units) when u.memory.role is roles.UPGRADER
       cost = getPathCost u.pos, controllerLocation
       if cost < minCost
         minCost = cost
-        closest = u
-    if unit is closest
-      controllers.push(room.controller)
-
-  if not controllers.length
-    controllers = [unit.room.controller]
-  controllerLocations = map controllers, (c) => pos: c.pos, range: 3
-  path = getPath unit.pos, controllerLocations
-  if path.length
-    moveBy path, unit
-  else
-    unit.upgradeController unit.room.controller
+        closestUnit = u
+    if unit is closestUnit
+      return room.controller.id
+  return unit.room.controller.id
 
 harvest = (unit) ->
   mines = []
@@ -139,7 +137,7 @@ repairStructureUrgent = (unit) ->
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                              ((s.hits < s.hitsMax and s.hits < 1500) or
-                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 50000))
+                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 100000))
     structures.push(structuresFound...) if structuresFound?
   return false if not structures.length
   structureLocations = map structures, ((s) => pos: s.pos, range: 3)

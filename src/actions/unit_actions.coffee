@@ -31,6 +31,8 @@ getUpgradeTarget = (unit) ->
 harvest = (unit) ->
   unit.memory.target or= getHarvestTarget unit
   target = Game.getObjectById unit.memory.target
+  if not target?
+    unit.memory.target = getHarvestTarget unit
   if target.structureType?  # Container present to sit on
     if unit.harvest(unit.pos.findClosestByRange(FIND_SOURCES)) == ERR_NOT_IN_RANGE
       targetLocation = pos: target.pos, range: 0

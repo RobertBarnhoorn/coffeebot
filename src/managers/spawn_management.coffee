@@ -9,10 +9,10 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER
 
 desired = (role) ->
   switch role
-    when roles.HARVESTER        then 4
+    when roles.HARVESTER        then 2
     when roles.UPGRADER         then 4
     when roles.ENGINEER         then 4
-    when roles.TRANSPORTER      then 4
+    when roles.TRANSPORTER      then 2
     when roles.RESERVER
       if Game.flags['reserve']? then 1 else 0
     when roles.CLAIMER

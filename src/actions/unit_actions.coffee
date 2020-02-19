@@ -1,4 +1,4 @@
-{ any, filter, forEach, map, reduce, values } = require 'lodash'
+{ any, filter, forEach, map, reduce, sample, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -29,6 +29,24 @@ getUpgradeTarget = (unit) ->
   return unit.room.controller.id
 
 harvest = (unit) ->
+  unit.memory.target or= getHarvestTarget unit
+  target = Game.getObjectById unit.memory.target
+  if target.structureType?  # Container present to sit on
+    if unit.harvest(unit.pos.findClosestByRange(FIND_SOURCES)) == ERR_NOT_IN_RANGE
+      targetLocation = pos: target.pos, range: 0
+      path = getPath unit.pos, targetLocation
+      moveBy path, unit
+  else if target.energy?  # No container built yet so just mine the source
+    if unit.harvest(target) == ERR_NOT_IN_RANGE
+      targetLocation = pos: target.pos, range: 1
+      path = getPath unit.pos, targetLocation
+      moveBy path, unit
+  else if target.name?  # All sources currently occupied so get ready to replace dying unit
+    targetLocation = pos: target.pos, range: 1
+    path = getPath unit.pos, targetLocation
+    moveBy path, unit
+
+getHarvestTarget = (unit) ->
   mines = []
   sources = []
   for room in values rooms
@@ -44,19 +62,13 @@ harvest = (unit) ->
       miners = filter s.pos.findInRange(FIND_CREEPS, 1), (u) => u.memory.role is roles.HARVESTER
       if miners.length is 0 or (miners.length is 1 and unit in miners)
         sources.push s
-
-  mineLocations = map mines, (m) => pos: m.pos, range: 0
-  sourceLocations = map sources, (s) => pos: s.pos, range: 1
-  resourceLocations = mineLocations.concat sourceLocations
-  if resourceLocations.length
-    path = getPath unit.pos, resourceLocations
-    if path.length
-      moveBy path, unit
-    else
-      unit.harvest unit.pos.findClosestByRange FIND_SOURCES_ACTIVE
+  resources = mines.concat sources
+  if resources.length
+    return resources[0].id
   else
-    expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER), 'ticksToLive'
-    moveTo expiringHarvester, unit if expiringHarvester?
+    expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER and u.name isnt unit.name), 'ticksToLive'
+    return expiringHarvester.id if expiringHarvester?
+  return undefined
 
 transfer = (unit) ->
   structures = []

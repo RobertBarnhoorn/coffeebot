@@ -8,21 +8,22 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER
               roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER, roles.MEDIC]
 
 desired = (role) ->
+  numSpawns = keys(spawns).length
   switch role
-    when roles.HARVESTER        then 2
-    when roles.UPGRADER         then 4
-    when roles.ENGINEER         then 4
-    when roles.TRANSPORTER      then 2
+    when roles.HARVESTER        then 2 * numSpawns
+    when roles.UPGRADER         then 3 * numSpawns
+    when roles.ENGINEER         then 3 * numSpawns
+    when roles.TRANSPORTER      then 3 * numSpawns
     when roles.RESERVER
       if Game.flags['reserve']? then 1 else 0
     when roles.CLAIMER
       if Game.flags['claim']?   then 1 else 0
     when roles.SOLDIER
-      if Game.flags['invade']?  then 3 else 0
+      if Game.flags['invade']?  then 2 else 0
     when roles.SNIPER
-      if Game.flags['invade']?  then 3 else 0
+      if Game.flags['invade']?  then 2 else 0
     when roles.MEDIC
-      if Game.flags['invade']?  then 3 else 0
+      if Game.flags['invade']?  then 4 else 0
 
 populationControl = ->
   # Count the actual populations by role

@@ -1,19 +1,20 @@
-{ countBy, keys, merge, shuffle, values } = require 'lodash'
+{ countBy, filter, keys, merge, shuffle, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { units } = require 'units'
 { spawns } = require 'spawns'
+{ rooms } = require 'rooms'
 { generateUnit } = require 'spawn_behaviours'
 
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER,
               roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER, roles.MEDIC]
 
 desired = (role) ->
-  numSpawns = keys(spawns).length
+  numRooms = filter(rooms, (r) => r.controller? and r.controller.my).length
   switch role
-    when roles.HARVESTER        then 2 * numSpawns
-    when roles.UPGRADER         then 4 * numSpawns
-    when roles.ENGINEER         then 2 * numSpawns
-    when roles.TRANSPORTER      then 2 * numSpawns
+    when roles.HARVESTER        then 2 * numRooms
+    when roles.UPGRADER         then 4 * numRooms
+    when roles.ENGINEER         then 2 * numRooms
+    when roles.TRANSPORTER      then 2 * numRooms
     when roles.RESERVER
       if Game.flags['reserve']? then 1 else 0
     when roles.CLAIMER

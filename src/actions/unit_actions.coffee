@@ -3,6 +3,8 @@
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { units } = require 'units'
+{ role_color } = require 'colors'
+
 
 upgrade = (unit) ->
   unit.memory.target or= getUpgradeTarget unit
@@ -297,7 +299,7 @@ moveTo = (location, unit) ->
 
 moveBy = (path, unit) ->
   unit.moveByPath path
-  unit.room.visual.poly path
+  unit.room.visual.poly path, lineStyle: 'dashed', stroke: role_color[unit.memory.role]
 
 getPath = (pos, loc) ->
   PathFinder.search(pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix).path

@@ -11,7 +11,7 @@ desired = (role) ->
   numSpawns = keys(spawns).length
   switch role
     when roles.HARVESTER        then 2 * numSpawns
-    when roles.UPGRADER         then 2 * numSpawns
+    when roles.UPGRADER         then 4 * numSpawns
     when roles.ENGINEER         then 2 * numSpawns
     when roles.TRANSPORTER      then 2 * numSpawns
     when roles.RESERVER

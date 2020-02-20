@@ -33,8 +33,11 @@ harvest = (unit) ->
   target = Game.getObjectById unit.memory.target
   if not target?
     unit.memory.target = getHarvestTarget unit
+    target = Game.getObjectById unit.memory.target
   if target.structureType?  # Container present to sit on
-    if unit.harvest(unit.pos.findClosestByRange(FIND_SOURCES)) == ERR_NOT_IN_RANGE
+    if unit.pos.isEqualTo target.pos
+      unit.harvest(unit.pos.findClosestByRange(FIND_SOURCES)) == ERR_NOT_IN_RANGE
+    else
       targetLocation = pos: target.pos, range: 0
       path = getPath unit.pos, targetLocation
       moveBy path, unit
@@ -95,8 +98,11 @@ collect = (unit) ->
                                filter: (r) => r.resourceType is RESOURCE_ENERGY
     containersFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType is STRUCTURE_CONTAINER
+    tombsFound = room.find FIND_TOMBSTONES,
+                           filter: (t) => t.store[RESOURCE_ENERGY] > 0
     resources.push(resourcesFound...) if resourcesFound?
     resources.push(containersFound...) if containersFound?
+    resources.push(tombsFound...) if tombsFound?
   prioritized = resources.sort((a, b) => (if b.amount? then b.amount else b.store[RESOURCE_ENERGY]) - \
                                          (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
                          .slice(0, Math.floor(Math.sqrt(resources.length)))
@@ -129,12 +135,15 @@ resupply = (unit) ->
     droppedFound = room.find FIND_DROPPED_RESOURCES,
                              filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY) and \
                                             r.resourceType is RESOURCE_ENERGY
+    tombsFound = room.find FIND_TOMBSTONES,
+                           filter: (t) => t.store[RESOURCE_ENERGY] > unit.store.getCapacity(RESOURCE_ENERGY)
     storesFound = room.find FIND_STRUCTURES,
                             filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
                                             s.structureType is STRUCTURE_STORAGE) and \
                                             s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
     resources.push(droppedFound...) if droppedFound?
     resources.push(storesFound...) if storesFound?
+    resources.push(tombsFound...) if tombsFound?
 
   resourceLocations = map resources, (r) => pos: r.pos, range: 1
   path = getPath unit.pos, resourceLocations
@@ -151,7 +160,7 @@ repairStructureUrgent = (unit) ->
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                              ((s.hits < s.hitsMax and s.hits < 1500) or
-                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 100000))
+                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 245000))
     structures.push(structuresFound...) if structuresFound?
   return false if not structures.length
   structureLocations = map structures, ((s) => pos: s.pos, range: 3)
@@ -159,11 +168,11 @@ repairStructureUrgent = (unit) ->
   if path.length
     moveBy path, unit
   else
-    if prioritized.length
-      unit.repair unit.pos.findInRange(prioritized, 3)[0]
+    if structures.length
+      unit.repair unit.pos.findInRange(structures, 3)[0]
     else
-      prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
-      path = getPath unit.pos, prioritizedLocations
+      structureLocations = map structures, (s) => pos: s.pos, range: 1
+      path = getPath unit.pos, structureLocations
       moveBy path, unit
   return true
 
@@ -288,6 +297,7 @@ moveTo = (location, unit) ->
 
 moveBy = (path, unit) ->
   unit.moveByPath path
+  unit.room.visual.poly path
 
 getPath = (pos, loc) ->
   PathFinder.search(pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix).path

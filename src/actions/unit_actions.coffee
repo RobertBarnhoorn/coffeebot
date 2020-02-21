@@ -1,4 +1,4 @@
-{ any, filter, forEach, map, reduce, sample, values } = require 'lodash'
+{ any, filter, forEach, map, reduce, sample, shuffle, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -22,12 +22,12 @@ getUpgradeTarget = (unit) ->
     minCost = 100000
     controllerLocation = pos: room.controller.pos, range: 1
     for u in values(units) when u.memory.role is roles.UPGRADER
-      cost = getPathCost u.pos, controllerLocation
+      cost = (getPath u.pos, controllerLocation).cost
       if cost < minCost
         minCost = cost
         closestUnit = u
-    if unit is closestUnit
-      return room.controller.id
+  if unit is closestUnit
+    return room.controller.id
   return unit.room.controller.id
 
 harvest = (unit) ->
@@ -36,9 +36,12 @@ harvest = (unit) ->
   if not target?
     unit.memory.target = getHarvestTarget unit
     target = Game.getObjectById unit.memory.target
+  if (getPath unit.pos, target).incomplete
+    unit.memory.target = getHarvestTarget unit
+    target = Game.getObjectById unit.memory.target
   if target.structureType?  # Container present to sit on
     if unit.pos.isEqualTo target.pos
-      unit.harvest(unit.pos.findClosestByRange(FIND_SOURCES)) == ERR_NOT_IN_RANGE
+      unit.harvest unit.pos.findClosestByRange(FIND_SOURCES)
     else
       targetLocation = pos: target.pos, range: 0
       path = getPath unit.pos, targetLocation
@@ -71,7 +74,7 @@ getHarvestTarget = (unit) ->
         sources.push s
   resources = mines.concat sources
   if resources.length
-    return resources[0].id
+    return shuffle(resources)[0].id
   else
     expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER and u.name isnt unit.name), 'ticksToLive'
     return expiringHarvester.id if expiringHarvester?
@@ -88,7 +91,7 @@ transfer = (unit) ->
     structures.push(structuresFound...) if structuresFound?
   structureLocations = map structures, (s) => pos: s.pos, range: 1
   path = getPath unit.pos, structureLocations
-  if path.length
+  if path.path.length
     moveBy path, unit
   else
     unit.transfer unit.pos.findClosestByRange(structures), RESOURCE_ENERGY
@@ -110,7 +113,7 @@ collect = (unit) ->
                          .slice(0, Math.floor(Math.sqrt(resources.length)))
   prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
   path = getPath unit.pos, prioritizedLocations
-  if path.length > 0
+  if path.path.length
     moveBy path, unit
   else
     target = unit.pos.findClosestByRange(prioritized)
@@ -125,7 +128,7 @@ build = (unit) ->
   return false if not sites.length
   siteLocations = map sites, (s) => pos: s.pos, range: 3
   path = getPath unit.pos, siteLocations
-  if path.length
+  if path.path.length
     moveBy path, unit
   else
     unit.build unit.pos.findClosestByRange sites
@@ -149,7 +152,7 @@ resupply = (unit) ->
 
   resourceLocations = map resources, (r) => pos: r.pos, range: 1
   path = getPath unit.pos, resourceLocations
-  if path.length
+  if path.path.length
     moveBy path, unit
   else
     target = unit.pos.findClosestByRange resources, RESOURCE_ENERGY
@@ -167,7 +170,7 @@ repairStructureUrgent = (unit) ->
   return false if not structures.length
   structureLocations = map structures, ((s) => pos: s.pos, range: 3)
   path = getPath unit.pos, structureLocations
-  if path.length
+  if path.path.length
     moveBy path, unit
   else
     if structures.length
@@ -190,7 +193,7 @@ repairStructureNonUrgent = (unit) ->
                          .slice(0, Math.floor(Math.sqrt(structures.length)))
   prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 3
   path = getPath unit.pos, prioritizedLocations
-  if path.length
+  if path.path.length
     moveBy path, unit
   else
     if prioritized.length
@@ -212,7 +215,7 @@ refillTower = (unit) ->
   return false if not towers.length
   towerLocations = map towers, (t) => pos: t.pos, range: 1
   path = getPath unit.pos, towerLocations
-  if path.length
+  if path.path.length
     moveBy path, unit
   else
     unit.transfer unit.pos.findClosestByRange(towers), RESOURCE_ENERGY
@@ -298,14 +301,11 @@ moveTo = (location, unit) ->
                                                      opacity: .1
 
 moveBy = (path, unit) ->
-  unit.moveByPath path
-  unit.room.visual.poly path, lineStyle: 'dashed', stroke: role_color[unit.memory.role]
+  unit.moveByPath path.path
+  #unit.room.visual.poly path.path, lineStyle: 'dashed', stroke: role_color[unit.memory.role]
 
 getPath = (pos, loc) ->
-  PathFinder.search(pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix).path
-
-getPathCost = (pos, loc) ->
-  PathFinder.search(pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix).cost
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix
 
 generateCostMatrix = (roomName) ->
   room = Game.rooms[roomName]

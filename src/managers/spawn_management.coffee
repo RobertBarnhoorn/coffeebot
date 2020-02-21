@@ -1,4 +1,4 @@
-{ countBy, filter, keys, merge, shuffle, values } = require 'lodash'
+{ countBy, filter, flatten, keys, merge, shuffle, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { units } = require 'units'
 { spawns } = require 'spawns'
@@ -9,12 +9,14 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER
               roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER, roles.MEDIC]
 
 desired = (role) ->
-  numRooms = filter(rooms, (r) => r.controller? and r.controller.my).length
+  myRooms = filter(rooms, (r) => r.controller? and r.controller.my)
+  numRooms = myRooms.length
+  numSources = (flatten (s for s in r.find(FIND_SOURCES) for r in values rooms)).length
   switch role
-    when roles.HARVESTER        then 2 * numRooms
-    when roles.UPGRADER         then 2 * numRooms
-    when roles.ENGINEER         then 2 * numRooms
-    when roles.TRANSPORTER      then 2 * numRooms
+    when roles.HARVESTER        then 1 * numSources
+    when roles.UPGRADER         then 1 * numRooms
+    when roles.ENGINEER         then 1 * numRooms
+    when roles.TRANSPORTER      then 1 * numSources
     when roles.RESERVER
       if Game.flags['reserve']? then 1 else 0
     when roles.CLAIMER

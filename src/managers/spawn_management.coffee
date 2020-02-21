@@ -12,7 +12,7 @@ desired = (role) ->
   numRooms = filter(rooms, (r) => r.controller? and r.controller.my).length
   switch role
     when roles.HARVESTER        then 2 * numRooms
-    when roles.UPGRADER         then 4 * numRooms
+    when roles.UPGRADER         then 2 * numRooms
     when roles.ENGINEER         then 2 * numRooms
     when roles.TRANSPORTER      then 2 * numRooms
     when roles.RESERVER

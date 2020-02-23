@@ -18,7 +18,7 @@ colors =
   FUCHSIA: '#FF00FF'
   PURPLE:  '#800080'
 
-role_color =
+path_colors =
   [roles.UPGRADER]:    colors.OLIVE
   [roles.HARVESTER]:   colors.GREEN
   [roles.ENGINEER]:    colors.NAVY
@@ -29,4 +29,4 @@ role_color =
   [roles.SNIPER]:      colors.YELLOW
   [roles.MEDIC]:       colors.LIME
 
-module.exports = { colors, role_color }
+module.exports = { colors, path_colors }

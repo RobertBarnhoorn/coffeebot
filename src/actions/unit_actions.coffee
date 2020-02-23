@@ -3,8 +3,7 @@
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { units } = require 'units'
-{ role_color } = require 'colors'
-
+{ flags, flag_intents } = require 'flags'
 
 upgrade = (unit) ->
   unit.memory.target or= getUpgradeTarget unit
@@ -15,9 +14,9 @@ upgrade = (unit) ->
     moveBy path, unit
 
 getUpgradeTarget = (unit) ->
-  for room in values rooms
-    if not room.controller? or not room.controller.my
-      continue
+  candidates = (room for room in values rooms \
+                when room.controller? and room.controller.my and not room.controller.reservation?)
+  for room in candidates
     closestUnit = undefined
     minCost = 100000
     controllerLocation = pos: room.controller.pos, range: 1
@@ -26,17 +25,14 @@ getUpgradeTarget = (unit) ->
       if cost < minCost
         minCost = cost
         closestUnit = u
-  if unit is closestUnit
-    return room.controller.id
-  return unit.room.controller.id
+    if unit is closestUnit
+      return room.controller.id
+  return (shuffle candidates)[0].name
 
 harvest = (unit) ->
   unit.memory.target or= getHarvestTarget unit
   target = Game.getObjectById unit.memory.target
   if not target?
-    unit.memory.target = getHarvestTarget unit
-    target = Game.getObjectById unit.memory.target
-  if (getPath unit.pos, target).incomplete
     unit.memory.target = getHarvestTarget unit
     target = Game.getObjectById unit.memory.target
   if target.structureType?  # Container present to sit on
@@ -165,7 +161,7 @@ repairStructureUrgent = (unit) ->
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                              ((s.hits < s.hitsMax and s.hits < 1500) or
-                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 245000))
+                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000))
     structures.push(structuresFound...) if structuresFound?
   return false if not structures.length
   structureLocations = map structures, ((s) => pos: s.pos, range: 3)
@@ -218,14 +214,29 @@ refillTower = (unit) ->
   return true
 
 reserve = (unit) ->
-  targetRoom = Game.flags['reserve'].pos.roomName
-  if unit.room.name isnt targetRoom
-    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
-    moveTo exit, unit
+  unit.memory.target or= getReserveTarget unit
+  target = flags[unit.memory.target]
+  room = rooms[target.pos.roomName]
+  if not room?
+    targetLocation = pos: target.pos, range: 1
+    path = getPath unit.pos, targetLocation
+    moveBy path, unit
+  else if unit.reserveController(room.controller) == ERR_NOT_IN_RANGE
+    targetLocation = pos: room.controller.pos, range: 1
+    path = getPath unit.pos, targetLocation
+    moveBy path, unit
+
+getReserveTarget = (unit) ->
+  targets = map filter(flags, (f) => f.color is flag_intents.RESERVE and
+                                     not any (u.memory.target is f.name for u in values(units) when u isnt unit)),
+                (f) => f.name
+
+  if targets.length
+    return targets[0]
   else
-    controller = Game.rooms[targetRoom].controller
-    if unit.reserveController(controller) == ERR_NOT_IN_RANGE
-      moveTo controller, unit
+    expiringReserver = minBy filter(units, (u) => u.memory.role is roles.RESERVER and u.name isnt unit.name), 'ticksToLive'
+    return expiringReserver.memory.target if expiringReserver?
+  return undefined
 
 claim = (unit) ->
   targetRoom = Game.flags['claim'].pos.roomName
@@ -297,11 +308,11 @@ moveTo = (location, unit) ->
                                                      opacity: .1
 
 moveBy = (path, unit) ->
+  unit.room.visual.poly (p for p in path.path when p.roomName is unit.room.name)
   unit.moveByPath path.path
-  #unit.room.visual.poly path.path, lineStyle: 'dashed', stroke: role_color[unit.memory.role]
 
 getPath = (pos, loc) ->
-  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix, maxOps: 2000
 
 generateCostMatrix = (roomName) ->
   room = Game.rooms[roomName]

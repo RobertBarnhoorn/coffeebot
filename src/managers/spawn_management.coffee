@@ -1,7 +1,9 @@
-{ countBy, filter, flatten, includes, keys, map, merge, shuffle, some, values } = require 'lodash'
+{ any, countBy, filter, flatten, includes, keys, map, merge, shuffle, some, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { units } = require 'units'
 { spawns } = require 'spawns'
+{ flags } = require 'flags'
+{ flag_intents } = require 'flags'
 { rooms } = require 'rooms'
 { generateUnit } = require 'spawn_behaviours'
 
@@ -11,21 +13,24 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER
 desired = (role) ->
   numRooms = (filter(rooms, (r) => r.controller? and r.controller.my)).length
   numSources = (flatten (s for s in r.find(FIND_SOURCES) for r in values rooms)).length
+  flagCount = countBy flags, 'color'
+
   switch role
     when roles.HARVESTER        then 1 * numSources
-    when roles.UPGRADER         then 3 * numRooms
-    when roles.ENGINEER         then 2 * numRooms
+    when roles.UPGRADER         then 1 * numRooms
+    when roles.ENGINEER         then 1 * numRooms
     when roles.TRANSPORTER      then 1 * numRooms
     when roles.RESERVER
-      if Game.flags['reserve']? then 1 else 0
+      flagCount[flag_intents.RESERVE]
     when roles.CLAIMER
-      if Game.flags['claim']?   then 1 else 0
+      flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      if Game.flags['invade']?  then 2 else 0
+      flagCount[flag_intents.ATTACK] * 2
     when roles.SNIPER
-      if Game.flags['invade']?  then 2 else 0
+      flagCount[flag_intents.DEFEND] * 10 or \
+      flagCount[flag_intents.ATTACK] * 2
     when roles.MEDIC
-      if Game.flags['invade']?  then 4 else 0
+      flagCount[flag_intents.ATTACK] * 4
 
 populationControl = ->
   # Count the actual populations by role

@@ -91,15 +91,14 @@ spawnReserver = (s) ->
   role = roles.RESERVER
   energy = maxEnergy(s)
   body = []
-  loop
-    energy = putBodyPart(s, body, MOVE, energy)
-    energy = putBodyPart(s, body, CLAIM, energy)
-    break if energy < minEnergy()
+  energy = putBodyPart(s, body, MOVE, energy)
+  energy = putBodyPart(s, body, CLAIM, energy)
+  energy = putBodyPart(s, body, CLAIM, energy)
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 4
+  spawnUnit(s, role, body, memory) if body.length >= 3
 
 spawnClaimer = (s) ->
   role = roles.CLAIMER

@@ -173,9 +173,7 @@ repairStructureUrgent = (unit) ->
   if path.path.length
     moveBy path, unit
   else
-    if structures.length
-      unit.repair unit.pos.findInRange(structures, 3)[0]
-    else
+    if unit.repair(unit.pos.findInRange(structures, 3)[0]) == ERR_NOT_IN_RANGE
       structureLocations = map structures, (s) => pos: s.pos, range: 1
       path = getPath unit.pos, structureLocations
       moveBy path, unit
@@ -196,9 +194,7 @@ repairStructureNonUrgent = (unit) ->
   if path.path.length
     moveBy path, unit
   else
-    if prioritized.length
-      unit.repair unit.pos.findInRange(prioritized, 3)[0]
-    else
+    if unit.repair(unit.pos.findInRange(prioritized, 3)[0]) == ERR_NOT_IN_RANGE
       prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
       path = getPath unit.pos, prioritizedLocations
       moveBy path, unit

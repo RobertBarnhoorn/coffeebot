@@ -2,7 +2,6 @@ defender = (tower) ->
   target = tower.pos.findClosestByRange FIND_HOSTILE_CREEPS
   if target?
     tower.attack target
-    tower.room.controller.activateSafeMode()
     return true
   return false
 

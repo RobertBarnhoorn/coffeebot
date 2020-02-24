@@ -41,16 +41,28 @@ harvest = (unit) ->
     else
       targetLocation = pos: target.pos, range: 0
       path = getPath unit.pos, targetLocation
-      moveBy path, unit
+      if path.incomplete
+        unit.memory.target = getHarvestTarget unit
+        target = Game.getObjectById unit.memory.target
+      else
+        moveBy path, unit
   else if target.energy?  # No container built yet so just mine the source
     if unit.harvest(target) == ERR_NOT_IN_RANGE
       targetLocation = pos: target.pos, range: 1
       path = getPath unit.pos, targetLocation
-      moveBy path, unit
+      if path.incomplete
+        unit.memory.target = getHarvestTarget unit
+        target = Game.getObjectById unit.memory.target
+      else
+        moveBy path, unit
   else if target.name?  # All sources currently occupied so get ready to replace dying unit
     targetLocation = pos: target.pos, range: 1
     path = getPath unit.pos, targetLocation
-    moveBy path, unit
+    if path.incomplete
+      unit.memory.target = getHarvestTarget unit
+      target = Game.getObjectById unit.memory.target
+    else
+      moveBy path, unit
 
 getHarvestTarget = (unit) ->
   mines = []
@@ -70,7 +82,7 @@ getHarvestTarget = (unit) ->
         sources.push s
   resources = mines.concat sources
   if resources.length
-    return shuffle(resources)[0].id
+    return (shuffle resources)[0].id
   else
     expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER and u.name isnt unit.name), 'ticksToLive'
     return expiringHarvester.id if expiringHarvester?
@@ -106,7 +118,7 @@ collect = (unit) ->
     resources.push(tombsFound...) if tombsFound?
   prioritized = resources.sort((a, b) => (if b.amount? then b.amount else b.store[RESOURCE_ENERGY]) - \
                                          (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
-                         .slice(0, Math.floor(Math.sqrt(resources.length)))
+                         .slice(0, Math.ceil(Math.sqrt(resources.length)))
   prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
   path = getPath unit.pos, prioritizedLocations
   if path.path.length
@@ -184,7 +196,7 @@ repairStructureNonUrgent = (unit) ->
 
   return false if not structures.length
   prioritized = structures.sort((a, b) => a.hits - b.hits) \
-                         .slice(0, Math.floor(Math.sqrt(structures.length)))
+                         .slice(0, Math.ceil(Math.sqrt(structures.length)))
   prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 3
   path = getPath unit.pos, prioritizedLocations
   if path.path.length

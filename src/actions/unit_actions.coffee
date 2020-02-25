@@ -1,39 +1,23 @@
-{ any, filter, forEach, map, reduce, sample, shuffle, values } = require 'lodash'
-{ minBy } = require 'algorithms'
+{ filter, map, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
-{ units } = require 'units'
-{ flags, flag_intents } = require 'flags'
+{ getPath, moveTo, moveBy } = require 'paths'
+{ upgradeTarget, harvestTarget, reserveTarget } = require 'unit_targeting'
+{ flags } = require 'flags'
 
 upgrade = (unit) ->
-  unit.memory.target or= getUpgradeTarget unit
+  unit.memory.target or= upgradeTarget unit
   controller = Game.getObjectById(unit.memory.target)
   if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
     targetLocation = pos: controller.pos, range: 3
     path = getPath unit.pos, targetLocation
     moveBy path, unit
 
-getUpgradeTarget = (unit) ->
-  candidates = (room for room in values rooms \
-                when room.controller? and room.controller.my and not room.controller.reservation?)
-  for room in candidates
-    closestUnit = undefined
-    minCost = 100000
-    controllerLocation = pos: room.controller.pos, range: 1
-    for u in values(units) when u.memory.role is roles.UPGRADER
-      cost = (getPath u.pos, controllerLocation).cost
-      if cost < minCost
-        minCost = cost
-        closestUnit = u
-    if unit is closestUnit
-      return room.controller.id
-  return (shuffle candidates)[0].name
-
 harvest = (unit) ->
-  unit.memory.target or= getHarvestTarget unit
+  unit.memory.target or= harvestTarget unit
   target = Game.getObjectById unit.memory.target
   if not target?
-    unit.memory.target = getHarvestTarget unit
+    unit.memory.target = harvestTarget unit
     target = Game.getObjectById unit.memory.target
   if target.structureType?  # Container present to sit on
     if unit.pos.isEqualTo target.pos
@@ -42,7 +26,7 @@ harvest = (unit) ->
       targetLocation = pos: target.pos, range: 0
       path = getPath unit.pos, targetLocation
       if path.incomplete
-        unit.memory.target = getHarvestTarget unit
+        unit.memory.target = harvestTarget unit
         target = Game.getObjectById unit.memory.target
       else
         moveBy path, unit
@@ -51,7 +35,7 @@ harvest = (unit) ->
       targetLocation = pos: target.pos, range: 1
       path = getPath unit.pos, targetLocation
       if path.incomplete
-        unit.memory.target = getHarvestTarget unit
+        unit.memory.target = harvestTarget unit
         target = Game.getObjectById unit.memory.target
       else
         moveBy path, unit
@@ -59,34 +43,10 @@ harvest = (unit) ->
     targetLocation = pos: target.pos, range: 1
     path = getPath unit.pos, targetLocation
     if path.incomplete
-      unit.memory.target = getHarvestTarget unit
+      unit.memory.target = harvestTarget unit
       target = Game.getObjectById unit.memory.target
     else
       moveBy path, unit
-
-getHarvestTarget = (unit) ->
-  mines = []
-  sources = []
-  for room in values rooms
-    minesFound = room.find FIND_STRUCTURES,
-                           filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
-                                          not any(s.pos.isEqualTo(u.pos) \
-                                          for u in values(units) when u isnt unit)
-    mines.push(minesFound...) if minesFound?
-
-    sourcesFound = room.find FIND_SOURCES,
-                             filter: (s) => not any(s.pos.inRangeTo(m.pos, 1) for m in minesFound)
-    for s in sourcesFound
-      miners = filter s.pos.findInRange(FIND_CREEPS, 1), (u) => u.memory.role is roles.HARVESTER
-      if miners.length is 0 or (miners.length is 1 and unit in miners)
-        sources.push s
-  resources = mines.concat sources
-  if resources.length
-    return (shuffle resources)[0].id
-  else
-    expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER and u.name isnt unit.name), 'ticksToLive'
-    return expiringHarvester.id if expiringHarvester?
-  return undefined
 
 transfer = (unit) ->
   structures = []
@@ -118,7 +78,7 @@ collect = (unit) ->
     resources.push(tombsFound...) if tombsFound?
   prioritized = resources.sort((a, b) => (if b.amount? then b.amount else b.store[RESOURCE_ENERGY]) - \
                                          (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
-                         .slice(0, Math.ceil(Math.sqrt(resources.length)))
+                         .slice(0, Math.floor(Math.sqrt(resources.length)))
   prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
   path = getPath unit.pos, prioritizedLocations
   if path.path.length
@@ -226,7 +186,7 @@ refillTower = (unit) ->
   return true
 
 reserve = (unit) ->
-  unit.memory.target or= getReserveTarget unit
+  unit.memory.target or= reserveTarget unit
   target = flags[unit.memory.target]
   room = rooms[target.pos.roomName]
   if not room?
@@ -237,18 +197,6 @@ reserve = (unit) ->
     targetLocation = pos: room.controller.pos, range: 1
     path = getPath unit.pos, targetLocation
     moveBy path, unit
-
-getReserveTarget = (unit) ->
-  targets = map filter(flags, (f) => f.color is flag_intents.RESERVE and
-                                     not any (u.memory.target is f.name for u in values(units) when u isnt unit)),
-                (f) => f.name
-
-  if targets.length
-    return targets[0]
-  else
-    expiringReserver = minBy filter(units, (u) => u.memory.role is roles.RESERVER and u.name isnt unit.name), 'ticksToLive'
-    return expiringReserver.memory.target if expiringReserver?
-  return undefined
 
 claim = (unit) ->
   targetRoom = Game.flags['claim'].pos.roomName
@@ -310,44 +258,6 @@ shouldWork = (unit) ->
     false
   else
     unit.memory.working
-
-moveTo = (location, unit) ->
-  unit.moveTo location, reusePath: 5, maxRooms: 1, visualizePathStyle:
-                                                     fill: 'transparent',
-                                                     stroke: '#ffaa00',
-                                                     lineStyle: 'dashed',
-                                                     strokeWidth: .15,
-                                                     opacity: .1
-
-moveBy = (path, unit) ->
-  unit.room.visual.poly (p for p in path.path when p.roomName is unit.room.name)
-  unit.moveByPath path.path
-
-getPath = (pos, loc) ->
-  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix, maxOps: 2000
-
-generateCostMatrix = (roomName) ->
-  room = Game.rooms[roomName]
-  return if not room?
-  costs = new PathFinder.CostMatrix
-
-  forEach room.find(FIND_STRUCTURES), (s) ->
-    if s.structureType is STRUCTURE_ROAD
-      costs.set s.pos.x, s.pos.y, 1
-    else if s.structureType isnt STRUCTURE_CONTAINER and
-           (s.structureType isnt STRUCTURE_RAMPART or not s.my)
-      costs.set s.pos.x, s.pos.y, 0xff
-
-  forEach room.find(FIND_CONSTRUCTION_SITES), (s) ->
-    if s.structureType isnt STRUCTURE_ROAD and \
-       s.structureType isnt STRUCTURE_CONTAINER and \
-      (s.structureType isnt STRUCTURE_RAMPART or not s.my)
-      costs.set s.pos.x, s.pos.y, 0xff
-
-  forEach room.find(FIND_CREEPS), (c) ->
-    costs.set c.pos.x, c.pos.y, 0xff
-
-  return costs
 
 module.exports = { upgrade, harvest, transfer, build,
                    repairStructureUrgent, repairStructureNonUrgent,

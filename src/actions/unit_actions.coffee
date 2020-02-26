@@ -2,7 +2,7 @@
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy } = require 'paths'
-{ upgradeTarget, harvestTarget, reserveTarget } = require 'unit_targeting'
+{ upgradeTarget, harvestTarget, reserveTarget, repairTarget, maintainTarget, buildTarget } = require 'unit_targeting'
 { flags } = require 'flags'
 
 upgrade = (unit) ->
@@ -89,17 +89,18 @@ collect = (unit) ->
       unit.memory.working = true
 
 build = (unit) ->
-  sites = []
-  for room in values rooms
-    sitesFound = room.find FIND_MY_CONSTRUCTION_SITES
-    sites.push(sitesFound...) if sitesFound?
-  return false if not sites.length
-  siteLocations = map sites, (s) => pos: s.pos, range: 3
-  path = getPath unit.pos, siteLocations
-  if path.path.length
+  unit.memory.buildTarget or= buildTarget unit
+  target = Game.getObjectById(unit.memory.buildTarget)
+  if not target?
+    unit.memory.buildTarget = buildTarget unit
+    target = Game.getObjectById(unit.memory.buildTarget)
+    if not target?
+      unit.memory.buildTarget = undefined
+      return false
+  if unit.build(target) == ERR_NOT_IN_RANGE
+    location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
+    path = getPath unit.pos, location
     moveBy path, unit
-  else
-    unit.build unit.pos.findClosestByRange sites
   return true
 
 resupply = (unit) ->
@@ -127,45 +128,48 @@ resupply = (unit) ->
     if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
       unit.memory.working = true
 
-repairStructureUrgent = (unit) ->
-  structures = []
-  for room in values rooms
-    structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) => s.structureType isnt STRUCTURE_WALL and \
-                                             ((s.hits < s.hitsMax and s.hits < 1500) or
-                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000))
-    structures.push(structuresFound...) if structuresFound?
-  return false if not structures.length
-  structureLocations = map structures, ((s) => pos: s.pos, range: 3)
-  path = getPath unit.pos, structureLocations
-  if path.path.length
+repair = (unit) ->
+  unit.memory.repairTarget or= repairTarget unit
+  target = Game.getObjectById(unit.memory.repairTarget)
+  if not target?
+    unit.memory.repairTarget = undefined
+    unit.memory.repairInitialHits = undefined
+    return false
+  unit.memory.repairInitialHits or= target.hits
+  if target.hits == target.hitsMax or target.hits >= unit.memory.repairInitialHits + 50000
+    unit.memory.repairTarget = repairTarget unit
+    target = Game.getObjectById(unit.memory.repairTarget)
+    unit.memory.repairInitialHits = target.hits
+    if not target?
+      unit.memory.repairTarget = undefined
+      unit.memory.repairInitialHits = undefined
+      return false
+  if unit.repair(target) == ERR_NOT_IN_RANGE
+    location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
+    path = getPath unit.pos, location
     moveBy path, unit
-  else
-    if unit.repair(unit.pos.findInRange(structures, 3)[0]) == ERR_NOT_IN_RANGE
-      structureLocations = map structures, (s) => pos: s.pos, range: 1
-      path = getPath unit.pos, structureLocations
-      moveBy path, unit
   return true
 
-repairStructureNonUrgent = (unit) ->
-  structures = []
-  for room in values rooms
-    structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) => s.hits < s.hitsMax
-    structures.push(structuresFound...) if structuresFound?
-
-  return false if not structures.length
-  prioritized = structures.sort((a, b) => a.hits - b.hits) \
-                         .slice(0, Math.ceil(Math.sqrt(structures.length)))
-  prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 3
-  path = getPath unit.pos, prioritizedLocations
-  if path.path.length
+maintain = (unit) ->
+  unit.memory.maintainTarget or= maintainTarget unit
+  target = Game.getObjectById(unit.memory.maintainTarget)
+  if not target?
+    unit.memory.maintainTarget = undefined
+    unit.memory.maintainInitialHits = undefined
+    return false
+  unit.memory.maintainInitialHits or= target.hits
+  if target.hits == target.hitsMax or target.hits >= unit.memory.maintainInitialHits + 50000
+    unit.memory.maintainTarget = maintainTarget unit
+    target = Game.getObjectById(unit.memory.maintainTarget)
+    if not target?
+      unit.memory.maintainTarget = undefined
+      unit.memory.maintainInitialHits = undefined
+      return false
+    unit.memory.maintainInitialHits = target.hits
+  if unit.repair(target) == ERR_NOT_IN_RANGE
+    location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
+    path = getPath unit.pos, location
     moveBy path, unit
-  else
-    if unit.repair(unit.pos.findInRange(prioritized, 3)[0]) == ERR_NOT_IN_RANGE
-      prioritizedLocations = map prioritized, (p) => pos: p.pos, range: 1
-      path = getPath unit.pos, prioritizedLocations
-      moveBy path, unit
   return true
 
 refillTower = (unit) ->
@@ -260,6 +264,6 @@ shouldWork = (unit) ->
     unit.memory.working
 
 module.exports = { upgrade, harvest, transfer, build,
-                   repairStructureUrgent, repairStructureNonUrgent,
-                   refillTower, shouldWork, moveTo, resupply,
-                   collect, claim, reserve, invade }
+                   repair, maintain, refillTower, shouldWork,
+                   moveTo, resupply, collect, claim,
+                   reserve, invade }

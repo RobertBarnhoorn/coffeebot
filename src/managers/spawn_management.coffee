@@ -18,8 +18,8 @@ desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * numSources
     when roles.UPGRADER         then 1 * numRooms
-    when roles.ENGINEER         then 1 * numSources
-    when roles.TRANSPORTER      then 1 * numSources
+    when roles.ENGINEER         then 1 * numRooms
+    when roles.TRANSPORTER      then 1 * numRooms
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

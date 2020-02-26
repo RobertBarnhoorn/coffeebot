@@ -58,4 +58,47 @@ reserveTarget = (unit) ->
     return expiringReserver.memory.target if expiringReserver?
   return undefined
 
-module.exports = { upgradeTarget, harvestTarget, reserveTarget }
+repairTarget = (unit) ->
+  structures = []
+  for room in values rooms
+    structuresFound = room.find FIND_STRUCTURES,
+                                filter: (s) => s.structureType isnt STRUCTURE_WALL and \
+                                             ((s.hits < s.hitsMax and s.hits < 2000) or
+                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
+                                              not any(u.memory.repairTarget is s.id for u in values(units) when u isnt unit)
+    structures.push(structuresFound...) if structuresFound?
+  return undefined if not structures.length
+  closest = unit.pos.findClosestByPath structures
+  if closest?
+    return closest.id
+  return (shuffle structures)[0].id
+
+maintainTarget = (unit) ->
+  structures = []
+  for room in values rooms
+    structuresFound = room.find FIND_STRUCTURES,
+                                filter: (s) => s.hits < s.hitsMax and \
+                                               not any(u.memory.maintainTarget is s.id for u in values(units) when u isnt unit)
+    structures.push(structuresFound...) if structuresFound?
+
+  return undefined if not structures.length
+  closest = unit.pos.findClosestByPath structures
+  if closest?
+    return closest.id
+  return (shuffle structures)[0].id
+
+buildTarget = (unit) ->
+  sites = []
+  for room in values rooms
+    sitesFound = room.find FIND_MY_CONSTRUCTION_SITES,
+                           filter: (s) => not any(u.memory.buildTarget is s.id for u in values(units) when u isnt unit)
+    sites.push(sitesFound...) if sitesFound?
+  return undefined if not sites.length
+  closest = unit.pos.findClosestByPath sites
+  if closest?
+    return closest.id
+  return (shuffle sites)[0].id
+
+
+module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
+                   maintainTarget, buildTarget }

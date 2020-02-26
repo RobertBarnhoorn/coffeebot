@@ -2,11 +2,10 @@
 { memExists, readMem } = require 'memory'
 { roles } = require 'unit_roles'
 { units } = require 'units'
-{ upgrade, harvest, transfer,
-  build, repairStructureUrgent, repairStructureNonUrgent,
-  refillTower, shouldWork, moveTo,
-  resupply, collect, reserve, claim,
-  invade } = require 'unit_actions'
+{ upgrade, harvest, transfer, build,
+  repair, maintain, refillTower, shouldWork,
+  moveTo, resupply, collect, reserve,
+  claim, invade } = require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit
@@ -28,7 +27,7 @@ upgrader = (unit) ->
 engineer = (unit) ->
   unit.memory.working = shouldWork unit
   if unit.memory.working
-    refillTower(unit) or repairStructureUrgent(unit) or build(unit) or repairStructureNonUrgent(unit)
+    refillTower(unit) or repair(unit) or build(unit) or maintain(unit)
   else
     resupply unit
 

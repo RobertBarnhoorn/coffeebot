@@ -5,7 +5,7 @@
 { cpuBucket } = require 'cpu'
 
 module.exports.loop = ->
-# console.log cpuBucket
+  console.log cpuBucket
   do garbageCollection
   do populationControl
   do unitManagement

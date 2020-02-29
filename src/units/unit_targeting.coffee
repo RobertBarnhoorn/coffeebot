@@ -82,6 +82,13 @@ harvestTarget = (unit) ->
     return expiringHarvester.id
   return undefined
 
+defendTarget = (unit) ->
+  targets = map filter(flags, (f) => f.color is flag_intents.DEFEND),
+                (f) => f.name
+  if targets.length
+    return (shuffle targets)[0]
+  return undefined
+
 reserveTarget = (unit) ->
   targets = map filter(flags, (f) => f.color is flag_intents.RESERVE),
                 (f) => f.name
@@ -140,4 +147,5 @@ buildTarget = (unit) ->
   return (shuffle sites)[0].id
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
-                   maintainTarget, buildTarget, collectTarget, transferTarget }
+                   maintainTarget, buildTarget, collectTarget, transferTarget,
+                   defendTarget }

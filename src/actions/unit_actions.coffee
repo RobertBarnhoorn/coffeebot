@@ -3,8 +3,9 @@
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
-  maintainTarget, buildTarget, collectTarget, transferTarget } = require 'unit_targeting'
-{ flags } = require 'flags'
+  maintainTarget, buildTarget, collectTarget, transferTarget,
+  defendTarget } = require 'unit_targeting'
+{ flags, flag_intents } = require 'flags'
 
 upgrade = (unit) ->
   unit.memory.target or= upgradeTarget unit
@@ -22,6 +23,7 @@ harvest = (unit) ->
     target = Game.getObjectById unit.memory.target
     if not target?
       unit.memory.target = undefined
+      return
   if target.structureType?  # Target is a container
     if unit.pos.isEqualTo target.pos
       unit.harvest unit.pos.findClosestByRange(FIND_SOURCES)
@@ -214,13 +216,33 @@ invade = (unit) ->
       when roles.MEDIC then heal unit
       else attackUnit(unit) or attackStructure(unit)
 
+defend = (unit) ->
+  unit.memory.target or= defendTarget unit
+  target = flags[unit.memory.target]
+  if not target?
+    unit.memory.target = defendTarget unit
+    target = flags[unit.memory.target]
+  if not target?
+    return
+  if unit.room.name isnt target.pos.roomName
+    targetLocation = pos: target.pos, range: 5
+    path = getPath unit.pos, targetLocation
+    moveBy path, unit
+  else
+    switch unit.memory.role
+      when roles.MEDIC then (heal unit) or moveTo target, unit
+      else (attackUnit unit) or moveTo target, unit
+
 attackUnit = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS
   if target?
-    moveTo target, unit
     switch unit.memory.role
-      when roles.SNIPER then unit.rangedAttack target
-      else unit.attack target
+      when roles.SNIPER
+        if unit.rangedAttack(target) == ERR_NOT_IN_RANGE
+          moveTo target, unit
+      else
+        if unit.attack(target) == ERR_NOT_IN_RANGE
+          moveTo target, unit
     return true
   return false
 
@@ -228,8 +250,8 @@ attackStructure = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES,
                                       filter: (s) => s.structureType isnt STRUCTURE_CONTROLLER
   if target?
-    moveTo target, unit
-    unit.attack target
+    if unit.attack(target) == ERR_NOT_IN_RANGE
+      moveTo target, unit
     return true
   return false
 
@@ -238,10 +260,12 @@ heal = (unit) ->
                            filter: (u) => u.hits < u.hitsMax
   if injured.length
     target = injured.sort((a, b) => a.hits - b.hits)[0]
-    moveTo target, unit
-    unit.heal target
+    if unit.heal(target) == ERR_NOT_IN_RANGE
+      unit.rangedHeal(target)
+      moveTo target, unit
     return true
   return false
+
 
 shouldWork = (unit) ->
   if unit.store.getFreeCapacity() is 0
@@ -254,4 +278,4 @@ shouldWork = (unit) ->
 module.exports = { upgrade, harvest, transfer, build,
                    repair, maintain, refillTower, shouldWork,
                    moveTo, resupply, collect, claim,
-                   reserve, invade }
+                   reserve, invade, defend }

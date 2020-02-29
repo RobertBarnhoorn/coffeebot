@@ -8,14 +8,15 @@ minEnergy =-> 0
 
 generateUnit = (s, role) ->
   switch role
-    when roles.HARVESTER then spawnHarvester s
+    when roles.HARVESTER   then spawnHarvester s
     when roles.TRANSPORTER then spawnTransporter s
-    when roles.UPGRADER then spawnUpgrader s
-    when roles.ENGINEER then spawnEngineer s
-    when roles.RESERVER then spawnReserver s
-    when roles.CLAIMER then spawnClaimer s
-    when roles.SOLDIER then spawnSoldier s
-    when roles.MEDIC then spawnMedic s
+    when roles.UPGRADER    then spawnUpgrader s
+    when roles.ENGINEER    then spawnEngineer s
+    when roles.RESERVER    then spawnReserver s
+    when roles.CLAIMER     then spawnClaimer s
+    when roles.SOLDIER     then spawnSoldier s
+    when roles.SNIPER      then spawnSniper s
+    when roles.MEDIC       then spawnMedic s
 
 spawnEngineer = (s) ->
   role = roles.ENGINEER
@@ -134,7 +135,7 @@ spawnSniper = (s) ->
   energy = maxEnergy(s)
   body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
           MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-          ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
+          RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK]
   memory =
     role: role
     working: false

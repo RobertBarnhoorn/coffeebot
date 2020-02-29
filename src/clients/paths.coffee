@@ -14,7 +14,7 @@ moveBy = (path, unit) ->
   unit.moveByPath path.path
 
 getPath = (pos, loc) ->
-  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix, maxOps: 2000
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix, maxOps: 5000
 
 generateCostMatrix = (roomName) ->
   room = Game.rooms[roomName]

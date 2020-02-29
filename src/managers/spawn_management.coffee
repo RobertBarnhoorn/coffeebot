@@ -43,10 +43,10 @@ populationControl = ->
     if count < desired role
       candidates.push role
     else
-      for _,unit of units
-        if unit.memory.role == role and unit.ticksToLive < 50 and not unit.memory.replaced?
+      for u in values units
+        if u.memory.role == role and u.ticksToLive < 100 and not u.memory.replaced?
          candidates.push role
-         unit.memory.replaced = true
+         u.memory.replaced = true
 
   choice = undefined
   for role in priorities
@@ -55,7 +55,7 @@ populationControl = ->
       break
 
   if choice?
-    for spawn in shuffle keys(spawns)
+    for spawn in shuffle keys spawns
       if generateUnit(spawn, choice) == OK
         break
 

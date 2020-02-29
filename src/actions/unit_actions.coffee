@@ -20,20 +20,13 @@ harvest = (unit) ->
   if not target?
     unit.memory.target = harvestTarget unit
     target = Game.getObjectById unit.memory.target
-  if target.structureType?  # Container present to sit on
+    if not target?
+      unit.memory.target = undefined
+  if target.structureType?  # Target is a container
     if unit.pos.isEqualTo target.pos
       unit.harvest unit.pos.findClosestByRange(FIND_SOURCES)
     else
       targetLocation = pos: target.pos, range: 0
-      path = getPath unit.pos, targetLocation
-      if path.incomplete
-        unit.memory.target = harvestTarget unit
-        target = Game.getObjectById unit.memory.target
-      else
-        moveBy path, unit
-  else if target.energy?  # No container built yet so just mine the source
-    if unit.harvest(target) == ERR_NOT_IN_RANGE
-      targetLocation = pos: target.pos, range: 1
       path = getPath unit.pos, targetLocation
       if path.incomplete
         unit.memory.target = harvestTarget unit
@@ -131,7 +124,7 @@ repair = (unit) ->
     unit.memory.repairInitialHits = undefined
     return false
   unit.memory.repairInitialHits or= target.hits
-  if target.hits == target.hitsMax or target.hits >= unit.memory.repairInitialHits + 50000
+  if target.hits == target.hitsMax or target.hits >= unit.memory.repairInitialHits + 25000
     unit.memory.repairTarget = repairTarget unit
     target = Game.getObjectById(unit.memory.repairTarget)
     if not target?

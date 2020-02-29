@@ -12,15 +12,17 @@ transferTarget = (unit) ->
     structuresFound = room.find FIND_MY_STRUCTURES,
                                 filter: (s) => s.energy < s.energyCapacity and \
                                                           s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
-    if room.storage? and not structuresFound.length
-      structuresFound =  (room.storage for room in rooms)
     structures.push(structuresFound...) if structuresFound?
 
-  return undefined if not structures.length
-  closest = unit.pos.findClosestByPath structures
-  if closest?
-    return closest.id
-  return (shuffle structures)[0].id
+  if structures.length
+    closest = unit.pos.findClosestByPath structures
+    if closest?
+      return closest.id
+    return (shuffle structures)[0].id
+
+  return (shuffle rooms)[0].storage.id
+
+
 
 collectTarget = (unit) ->
   resources = []
@@ -65,38 +67,31 @@ upgradeTarget = (unit) ->
   return (shuffle candidates)[0].controller.id
 
 harvestTarget = (unit) ->
-  mines = []
-  sources = []
-  for room in values rooms
-    minesFound = room.find FIND_STRUCTURES,
-                           filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
-                                          not any(s.pos.isEqualTo(u.pos) \
-                                          for u in values(units) when u isnt unit)
-    mines.push(minesFound...) if minesFound?
+  for room in shuffle values rooms
+    mines = filter room.find(FIND_STRUCTURES),
+                   (s) => s.structureType is STRUCTURE_CONTAINER and
+                          not any (u.memory.target is s.id for u in values units)
+    if mines.length
+      return (shuffle mines)[0].id
 
-    sourcesFound = room.find FIND_SOURCES,
-                             filter: (s) => not any(s.pos.inRangeTo(m.pos, 1) for m in minesFound)
-    for s in sourcesFound
-      miners = filter s.pos.findInRange(FIND_CREEPS, 1), (u) => u.memory.role is roles.HARVESTER
-      if miners.length is 0 or (miners.length is 1 and unit in miners)
-        sources.push s
-  resources = mines.concat sources
-  if resources.length
-    return (shuffle resources)[0].id
-  else
-    expiringHarvester = minBy filter(units, (u) => u.memory.role is roles.HARVESTER and u.name isnt unit.name), 'ticksToLive'
-    return expiringHarvester.id if expiringHarvester?
+  expiringHarvester = minBy filter(units,
+                                   (u) => u.memory.role is roles.HARVESTER and
+                                          not any (u.memory.target is u.id for u in values units)),
+                            'ticksToLive'
+  if expiringHarvester?
+    return expiringHarvester.id
   return undefined
 
 reserveTarget = (unit) ->
-  targets = map filter(flags, (f) => f.color is flag_intents.RESERVE and
-                                     not any (u.memory.target is f.name for u in values(units) when u isnt unit)),
+  targets = map filter(flags, (f) => f.color is flag_intents.RESERVE),
                 (f) => f.name
 
   if targets.length
-    return targets[0]
+    return (shuffle targets)[0]
   else
-    expiringReserver = minBy filter(units, (u) => u.memory.role is roles.RESERVER and u.name isnt unit.name), 'ticksToLive'
+    expiringReserver = minBy filter units,
+                                    (u) => u.memory.role is roles.RESERVER,
+                             'ticksToLive'
     return expiringReserver.memory.target if expiringReserver?
   return undefined
 
@@ -107,7 +102,7 @@ repairTarget = (unit) ->
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                              ((s.hits < s.hitsMax and s.hits < 2000) or
                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
-                                              not any(u.memory.repairTarget is s.id for u in values(units) when u isnt unit)
+                                              not any (u.memory.repairTarget is s.id for u in values units)
     structures.push(structuresFound...) if structuresFound?
   return undefined if not structures.length
   closest = unit.pos.findClosestByPath structures
@@ -120,7 +115,7 @@ maintainTarget = (unit) ->
   for room in values rooms
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.hits < s.hitsMax and \
-                                               not any(u.memory.maintainTarget is s.id for u in values(units) when u isnt unit)
+                                               not any(u.memory.maintainTarget is s.id for u in values units)
     structures.push(structuresFound...) if structuresFound?
 
   prioritized = structures.sort((a, b) => a.hits - b.hits) \
@@ -136,7 +131,7 @@ buildTarget = (unit) ->
   sites = []
   for room in values rooms
     sitesFound = room.find FIND_MY_CONSTRUCTION_SITES,
-                           filter: (s) => not any(u.memory.buildTarget is s.id for u in values(units) when u isnt unit)
+                           filter: (s) => not any(u.memory.buildTarget is s.id for u in values units)
     sites.push(sitesFound...) if sitesFound?
   return undefined if not sites.length
   closest = unit.pos.findClosestByPath sites

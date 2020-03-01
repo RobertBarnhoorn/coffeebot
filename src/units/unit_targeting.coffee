@@ -1,4 +1,4 @@
-{ any, filter, map, shuffle, values } = require 'lodash'
+{ any, filter, map, sample, shuffle, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -18,11 +18,9 @@ transferTarget = (unit) ->
     closest = unit.pos.findClosestByPath structures
     if closest?
       return closest.id
-    return (shuffle structures)[0].id
+    return (sample structures).id
 
-  return (shuffle rooms)[0].storage.id
-
-
+  return (sample rooms).storage.id
 
 collectTarget = (unit) ->
   resources = []
@@ -48,7 +46,7 @@ collectTarget = (unit) ->
   closest = unit.pos.findClosestByPath prioritized
   if closest?
     return closest.id
-  return (shuffle prioritized)[0].id
+  return (sample prioritized).id
 
 upgradeTarget = (unit) ->
   candidates = (room for room in values rooms \
@@ -64,29 +62,43 @@ upgradeTarget = (unit) ->
         closestUnit = u
     if unit is closestUnit
       return room.controller.id
-  return (shuffle candidates)[0].controller.id
+  return (sample candidates).controller.id
 
 harvestTarget = (unit) ->
+  # See if there is an available container to sit on
+  mines = []
   for room in shuffle values rooms
-    mines = filter room.find(FIND_STRUCTURES),
-                   (s) => s.structureType is STRUCTURE_CONTAINER and
-                          not any (u.memory.target is s.id for u in values units)
-    if mines.length
-      return (shuffle mines)[0].id
+    mines.push filter(room.find(FIND_STRUCTURES),
+                     (m) -> m.structureType is STRUCTURE_CONTAINER)
+    availableMines = filter mines,
+                            (m) -> not any (u.memory.target is m.id for u in values units)
+    if availableMines.length
+      return (sample availableMines).id
 
+  # See if there is any other available energy source
+  for room in shuffle values rooms
+    sources = filter room.find(FIND_SOURCES),
+                     (s) => not s.pos.inRangeTo(m, 1) for m in mines and \
+                            not any (u.memory.target is s.id for u in values units)
+    if sources.length
+      return (sample sources).id
+
+  # Replace the harvester that is closest to death
   expiringHarvester = minBy filter(units,
                                    (u) => u.memory.role is roles.HARVESTER and
                                           not any (u.memory.target is u.id for u in values units)),
                             'ticksToLive'
   if expiringHarvester?
     return expiringHarvester.id
+
   return undefined
 
 defendTarget = (unit) ->
   targets = map filter(flags, (f) => f.color is flag_intents.DEFEND),
                 (f) => f.name
   if targets.length
-    return (shuffle targets)[0]
+    # Go to the defensive flag which has fewest defensive units
+    return minBy targets, ((t) -> (u for u in units when u.memory.target is t).length)
   return undefined
 
 reserveTarget = (unit) ->
@@ -94,7 +106,7 @@ reserveTarget = (unit) ->
                 (f) => f.name
 
   if targets.length
-    return (shuffle targets)[0]
+    return sample targets
   else
     expiringReserver = minBy filter units,
                                     (u) => u.memory.role is roles.RESERVER,
@@ -115,7 +127,7 @@ repairTarget = (unit) ->
   closest = unit.pos.findClosestByPath structures
   if closest?
     return closest.id
-  return (shuffle structures)[0].id
+  return (sample structures).id
 
 maintainTarget = (unit) ->
   structures = []
@@ -132,7 +144,7 @@ maintainTarget = (unit) ->
   closest = unit.pos.findClosestByPath prioritized
   if closest?
     return closest.id
-  return (shuffle prioritized)[0].id
+  return (sample prioritized).id
 
 buildTarget = (unit) ->
   sites = []
@@ -144,7 +156,7 @@ buildTarget = (unit) ->
   closest = unit.pos.findClosestByPath sites
   if closest?
     return closest.id
-  return (shuffle sites)[0].id
+  return (sample sites).id
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    maintainTarget, buildTarget, collectTarget, transferTarget,

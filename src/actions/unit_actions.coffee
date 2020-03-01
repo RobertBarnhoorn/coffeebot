@@ -21,10 +21,12 @@ harvest = (unit) ->
   if not target?
     unit.memory.target = harvestTarget unit
     target = Game.getObjectById unit.memory.target
-    if not target?
-      unit.memory.target = undefined
-      return
-  if target.structureType?  # Target is a container
+  if not target?
+    unit.memory.target = undefined
+    return
+
+  # Target is a container so go sit on it and harvest
+  if target.structureType?
     if unit.pos.isEqualTo target.pos
       unit.harvest unit.pos.findClosestByRange(FIND_SOURCES)
     else
@@ -35,6 +37,7 @@ harvest = (unit) ->
         target = Game.getObjectById unit.memory.target
       else
         moveBy path, unit
+  # Target is an expiring unit so go take its place
   else if target.name?  # All sources currently occupied so get ready to replace dying unit
     targetLocation = pos: target.pos, range: 1
     path = getPath unit.pos, targetLocation
@@ -224,14 +227,18 @@ defend = (unit) ->
     target = flags[unit.memory.target]
   if not target?
     return
-  if unit.room.name isnt target.pos.roomName
-    targetLocation = pos: target.pos, range: 5
-    path = getPath unit.pos, targetLocation
-    moveBy path, unit
-  else
-    switch unit.memory.role
-      when roles.MEDIC then (heal unit) or moveTo target, unit
-      else (attackUnit unit) or moveTo target, unit
+
+  switch unit.memory.role
+    when roles.MEDIC
+      if not heal unit
+        location = pos: target.pos, range: 5
+        path = getPath unit.pos, location
+        moveBy path, unit
+    else
+      if not attackUnit unit
+        location = pos: target.pos, range: 5
+        path = getPath unit.pos, location
+        moveBy path, unit
 
 attackUnit = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS

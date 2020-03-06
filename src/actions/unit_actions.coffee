@@ -4,7 +4,7 @@
 { getPath, moveTo, moveBy } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
   maintainTarget, buildTarget, collectTarget, transferTarget,
-  defendTarget } = require 'unit_targeting'
+  defendTarget, claimTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
 
 upgrade = (unit) ->
@@ -32,20 +32,18 @@ harvest = (unit) ->
     else
       targetLocation = pos: target.pos, range: 0
       path = getPath unit.pos, targetLocation
-      if path.incomplete
-        unit.memory.target = harvestTarget unit
-        target = Game.getObjectById unit.memory.target
-      else
-        moveBy path, unit
+      moveBy path, unit
+  # Target is an energy source so go mine it
+  else if target.energy?
+    if unit.harvest(target) == ERR_NOT_IN_RANGE
+      targetLocation = pos: target.pos, range: 1
+      path = getPath unit.pos, targetLocation
+      moveBy path, unit
   # Target is an expiring unit so go take its place
   else if target.name?  # All sources currently occupied so get ready to replace dying unit
     targetLocation = pos: target.pos, range: 1
     path = getPath unit.pos, targetLocation
-    if path.incomplete
-      unit.memory.target = harvestTarget unit
-      target = Game.getObjectById unit.memory.target
-    else
-      moveBy path, unit
+    moveBy path, unit
 
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
@@ -196,18 +194,25 @@ reserve = (unit) ->
     moveBy path, unit
 
 claim = (unit) ->
-  targetRoom = Game.flags['claim'].pos.roomName
-  if unit.room.name isnt targetRoom
-    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
-    moveTo exit, unit
+  unit.memory.target or= claimTarget unit
+  target = flags[unit.memory.target]
+  room = rooms[target.pos.roomName]
+  if not room?
+    targetLocation = pos: target.pos, range: 1
+    path = getPath unit.pos, targetLocation
+    moveBy path, unit
   else
-    controller = Game.rooms[targetRoom].controller
+    controller = room.controller
     if controller.owner? and not controller.my
       if unit.attackController(controller) == ERR_NOT_IN_RANGE
-        moveTo controller, unit
+        targetLocation = pos: room.controller.pos, range: 1
+        path = getPath unit.pos, targetLocation
+        moveBy path, unit
     else
       if unit.claimController(controller) == ERR_NOT_IN_RANGE
-        moveTo controller, unit
+        targetLocation = pos: room.controller.pos, range: 1
+        path = getPath unit.pos, targetLocation
+        moveBy path, unit
 
 invade = (unit) ->
   targetRoom = Game.flags['invade'].pos.roomName

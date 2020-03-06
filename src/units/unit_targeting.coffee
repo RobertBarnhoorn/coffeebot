@@ -68,50 +68,56 @@ harvestTarget = (unit) ->
   # See if there is an available container to sit on
   mines = []
   for room in shuffle values rooms
-    mines.push filter(room.find(FIND_STRUCTURES),
-                     (m) -> m.structureType is STRUCTURE_CONTAINER)
-    availableMines = filter mines,
-                            (m) -> not any (u.memory.target is m.id for u in values units)
+    roomMines = filter(room.find(FIND_STRUCTURES),
+                      (m) -> m.structureType is STRUCTURE_CONTAINER)
+    availableMines = filter(roomMines, (m) -> not any(m.id is u.memory.target for u in values(units)))
+    mines.push roomMines
     if availableMines.length
       return (sample availableMines).id
-
   # See if there is any other available energy source
   for room in shuffle values rooms
-    sources = filter room.find(FIND_SOURCES),
-                     (s) => not s.pos.inRangeTo(m, 1) for m in mines and \
-                            not any (u.memory.target is s.id for u in values units)
+    sources = filter(room.find(FIND_SOURCES),
+                    (s) => not any(s.pos.inRangeTo(m, 2) for m in mines) and \
+                           not any(u.memory.target is s.id for u in values units))
     if sources.length
       return (sample sources).id
 
   # Replace the harvester that is closest to death
-  expiringHarvester = minBy filter(units,
-                                   (u) => u.memory.role is roles.HARVESTER and
-                                          not any (u.memory.target is u.id for u in values units)),
-                            'ticksToLive'
+  expiringHarvester = minBy(filter(units,
+                                  (u) => u.memory.role is roles.HARVESTER and
+                                         not any (u.memory.target is u.id for u in values units)),
+                           'ticksToLive')
   if expiringHarvester?
     return expiringHarvester.id
 
   return undefined
 
 defendTarget = (unit) ->
-  targets = map filter(flags, (f) => f.color is flag_intents.DEFEND),
-                (f) => f.name
+  targets = map(filter(flags, (f) => f.color is flag_intents.DEFEND),
+               (f) => f.name)
   if targets.length
     # Go to the defensive flag which has fewest defensive units
-    return minBy targets, ((t) -> (u for u in units when u.memory.target is t).length)
+    return sample targets
   return undefined
 
 reserveTarget = (unit) ->
-  targets = map filter(flags, (f) => f.color is flag_intents.RESERVE),
-                (f) => f.name
+  targets = map(filter(flags, (f) -> f.color is flag_intents.RESERVE and not any (u.memory.target is f.name for u in values units)),
+               (f) => f.name)
 
   if targets.length
     return sample targets
   else
-    expiringReserver = minBy filter units,
-                                    (u) => u.memory.role is roles.RESERVER,
+    expiringReserver = minBy filter(units,
+                                   (u) => u.memory.role is roles.RESERVER),
                              'ticksToLive'
     return expiringReserver.memory.target if expiringReserver?
+  return undefined
+
+claimTarget = (unit) ->
+  targets = map(filter(flags, (f) -> f.color is flag_intents.CLAIM and not any (u.memory.target is f.name for u in values units)),
+               (f) => f.name)
+  if targets.length
+    return sample targets
   return undefined
 
 repairTarget = (unit) ->
@@ -119,6 +125,7 @@ repairTarget = (unit) ->
   for room in values rooms
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
+                                               s.my if s.my? and \
                                              ((s.hits < s.hitsMax and s.hits < 2000) or
                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
                                               not any (u.memory.repairTarget is s.id for u in values units)
@@ -160,4 +167,4 @@ buildTarget = (unit) ->
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    maintainTarget, buildTarget, collectTarget, transferTarget,
-                   defendTarget }
+                   defendTarget, claimTarget }

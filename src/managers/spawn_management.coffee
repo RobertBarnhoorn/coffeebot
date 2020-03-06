@@ -17,7 +17,7 @@ desired = (role) ->
 
   switch role
     when roles.HARVESTER        then 1 * numSources
-    when roles.UPGRADER         then 1 * numSources
+    when roles.UPGRADER         then 1 * numRooms
     when roles.ENGINEER         then 1 * numRooms
     when roles.TRANSPORTER      then 1 * numSources
     when roles.RESERVER

@@ -1,4 +1,5 @@
 { clearDeadUnitMemory } = require 'memory_actions'
+{ cacheCostMatrices } = require 'paths'
 
 garbageCollection = ->
   do clearDeadUnitMemory

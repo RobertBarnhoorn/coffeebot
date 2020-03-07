@@ -1,6 +1,8 @@
 { forEach } = require 'lodash'
 { rooms } = require 'rooms'
-{ cpuBucket } = require 'cpu'
+{ cpuUsed } = require 'cpu'
+
+costMatrices = {}
 
 moveTo = (location, unit) ->
   unit.moveTo location, reusePath: 5, maxRooms: 1, visualizePathStyle:
@@ -15,7 +17,29 @@ moveBy = (path, unit) ->
   unit.moveByPath path.path
 
 getPath = (pos, loc) ->
-  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix, maxOps: 5000
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 5000
+
+getCostMatrix = (roomName) ->
+  costMatrix = costMatrices[roomName]
+  console.log 'CACHED!' if costMatrix?
+  return costMatrix if costMatrix?
+
+  room = Game.rooms[roomName]
+  return if not room?
+
+  if room.memory.ttl > 0
+    room.memory.ttl -= 1
+    costMatrix = PathFinder.CostMatrix.deserialize(room.memory.costMatrix)
+    costMatrices[room.name] = costMatrix
+    console.log 'DESERIALIZED!' if costMatrix?
+    return costMatrix
+
+  room.memory.ttl = 100
+  costMatrix = generateCostMatrix roomName
+  room.memory.costMatrix = costMatrix.serialize()
+  costMatrices[room.name] = costMatrix
+  console.log 'GENERATED!' if costMatrix?
+  return costMatrix
 
 generateCostMatrix = (roomName) ->
   room = Game.rooms[roomName]

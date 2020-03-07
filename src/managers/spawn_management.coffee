@@ -17,9 +17,9 @@ flagCount = countBy flags, 'color'
 desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * numSources
-    when roles.UPGRADER         then 1 * 3
-    when roles.ENGINEER         then 1 * 5
-    when roles.TRANSPORTER      then 1 * 3
+    when roles.UPGRADER         then 1 * numRooms
+    when roles.ENGINEER         then 1 * numRooms
+    when roles.TRANSPORTER      then 1 * numRooms
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER
@@ -43,7 +43,7 @@ populationControl = ->
       candidates.push role
     else
       for u in values units
-        if u.memory.role == role and u.ticksToLive < 100 and not u.memory.replaced?
+        if u.memory.role == role and u.ticksToLive < 50 and not u.memory.replaced?
          candidates.push role
          u.memory.replaced = true
 

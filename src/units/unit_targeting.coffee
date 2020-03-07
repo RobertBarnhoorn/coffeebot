@@ -126,7 +126,7 @@ repairTarget = (unit) ->
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                               (if s.my? then s.my else false) and \
-                                             ((s.hits < s.hitsMax and s.hits < 2000) or
+                                             ((s.hits < s.hitsMax and s.hits < 3500) or
                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
                                               not any (u.memory.repairTarget is s.id for u in values units)
     structures.push(structuresFound...) if structuresFound?

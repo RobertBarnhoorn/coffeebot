@@ -1,18 +1,19 @@
+{ shuffle, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { units } = require 'units'
 { harvester, upgrader, engineer, transporter, reserver, claimer, soldier, sniper, medic } = require 'unit_behaviours'
 
 unitManagement = ->
-  for _,unit of units
-    switch unit.memory.role
-      when roles.UPGRADER then upgrader unit
-      when roles.HARVESTER then harvester unit
-      when roles.ENGINEER then engineer unit
-      when roles.TRANSPORTER then transporter unit
-      when roles.RESERVER then reserver unit
-      when roles.CLAIMER then claimer unit
-      when roles.SOLDIER then soldier unit
-      when roles.SNIPER then sniper unit
-      when roles.MEDIC then medic unit
+  for u in shuffle values units
+    switch u.memory.role
+      when roles.UPGRADER then upgrader u
+      when roles.HARVESTER then harvester u
+      when roles.ENGINEER then engineer u
+      when roles.TRANSPORTER then transporter u
+      when roles.RESERVER then reserver u
+      when roles.CLAIMER then claimer u
+      when roles.SOLDIER then soldier u
+      when roles.SNIPER then sniper u
+      when roles.MEDIC then medic u
 
 module.exports = { unitManagement }

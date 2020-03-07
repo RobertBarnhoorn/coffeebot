@@ -75,20 +75,20 @@ harvestTarget = (unit) ->
     if availableMines.length
       return (sample availableMines).id
   # See if there is any other available energy source
-  for room in shuffle values rooms
-    sources = filter(room.find(FIND_SOURCES),
-                    (s) => not any(s.pos.inRangeTo(m, 2) for m in mines) and \
-                           not any(u.memory.target is s.id for u in values units))
-    if sources.length
-      return (sample sources).id
+# for room in shuffle values rooms
+#   sources = filter(room.find(FIND_SOURCES),
+#                   (s) -> not any(m in s.pos.findInRange(FIND_STRUCTURES, 1) for m in mines) and \
+#                          not any(u.memory.target is s.id for u in values units))
+#   if sources.length
+#     return (sample sources).id
 
   # Replace the harvester that is closest to death
-  expiringHarvester = minBy(filter(units,
-                                  (u) => u.memory.role is roles.HARVESTER and
-                                         not any (u.memory.target is u.id for u in values units)),
-                           'ticksToLive')
-  if expiringHarvester?
-    return expiringHarvester.id
+# expiringHarvester = minBy(filter(units,
+#                                 (u) => u.memory.role is roles.HARVESTER and
+#                                        not any (u.memory.target is u.id for u in values units)),
+#                          'ticksToLive')
+# if expiringHarvester?
+#   return expiringHarvester.id
 
   return undefined
 
@@ -125,7 +125,7 @@ repairTarget = (unit) ->
   for room in values rooms
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
-                                               s.my if s.my? and \
+                                              (if s.my? then s.my else false) and \
                                              ((s.hits < s.hitsMax and s.hits < 2000) or
                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
                                               not any (u.memory.repairTarget is s.id for u in values units)

@@ -10,16 +10,16 @@
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER,
               roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER, roles.MEDIC]
 
-desired = (role) ->
-  numRooms = (filter(rooms, (r) => r.controller? and r.controller.my)).length
-  numSources = (flatten (s for s in r.find(FIND_SOURCES) for r in values rooms)).length
-  flagCount = countBy flags, 'color'
+numRooms = (filter(rooms, (r) => r.controller? and r.controller.my)).length
+numSources = (flatten (s for s in r.find(FIND_SOURCES) for r in values rooms)).length
+flagCount = countBy flags, 'color'
 
+desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * numSources
-    when roles.UPGRADER         then 1 * numRooms
-    when roles.ENGINEER         then 1 * numRooms
-    when roles.TRANSPORTER      then 1 * numSources
+    when roles.UPGRADER         then 1 * 3
+    when roles.ENGINEER         then 1 * 5
+    when roles.TRANSPORTER      then 1 * 3
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

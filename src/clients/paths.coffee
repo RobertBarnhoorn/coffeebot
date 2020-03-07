@@ -1,5 +1,6 @@
 { forEach } = require 'lodash'
 { rooms } = require 'rooms'
+{ cpuBucket } = require 'cpu'
 
 moveTo = (location, unit) ->
   unit.moveTo location, reusePath: 5, maxRooms: 1, visualizePathStyle:
@@ -14,7 +15,7 @@ moveBy = (path, unit) ->
   unit.moveByPath path.path
 
 getPath = (pos, loc) ->
-  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix, maxOps: 2000
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrix, maxOps: 5000
 
 generateCostMatrix = (roomName) ->
   room = Game.rooms[roomName]

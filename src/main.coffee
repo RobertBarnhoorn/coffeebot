@@ -7,7 +7,7 @@
 module.exports.loop = ->
   console.log cpuBucket
   do garbageCollection
-  do populationControl
-  do unitManagement
   do towerManagement
   do failSafe
+  do populationControl
+  do unitManagement

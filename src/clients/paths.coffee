@@ -21,7 +21,6 @@ getPath = (pos, loc) ->
 
 getCostMatrix = (roomName) ->
   costMatrix = costMatrices[roomName]
-  console.log 'CACHED!' if costMatrix?
   return costMatrix if costMatrix?
 
   room = Game.rooms[roomName]
@@ -31,14 +30,12 @@ getCostMatrix = (roomName) ->
     room.memory.ttl -= 1
     costMatrix = PathFinder.CostMatrix.deserialize(room.memory.costMatrix)
     costMatrices[room.name] = costMatrix
-    console.log 'DESERIALIZED!' if costMatrix?
     return costMatrix
 
-  room.memory.ttl = 100
+  room.memory.ttl = 25
   costMatrix = generateCostMatrix roomName
   room.memory.costMatrix = costMatrix.serialize()
   costMatrices[room.name] = costMatrix
-  console.log 'GENERATED!' if costMatrix?
   return costMatrix
 
 generateCostMatrix = (roomName) ->

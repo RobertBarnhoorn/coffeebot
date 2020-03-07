@@ -11,8 +11,8 @@ upgrade = (unit) ->
   unit.memory.target or= upgradeTarget unit
   controller = Game.getObjectById(unit.memory.target)
   if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
-    targetLocation = pos: controller.pos, range: 3
-    path = getPath unit.pos, targetLocation
+    location = pos: controller.pos, range: 3
+    path = getPath unit.pos, location
     moveBy path, unit
 
 harvest = (unit) ->
@@ -24,26 +24,17 @@ harvest = (unit) ->
   if not target?
     unit.memory.target = undefined
     return
-
-  # Target is a container so go sit on it and harvest
-  if target.structureType?
-    if unit.pos.isEqualTo target.pos
-      unit.harvest unit.pos.findClosestByRange(FIND_SOURCES)
+  if unit.harvest(target) == ERR_NOT_IN_RANGE
+    container = target.pos.findClosestByRange STRUCTURE_CONTAINER
+    if container?
+      location = pos: container.pos, range: 0
+      path = getPath unit.pos, location
+      moveBy path, unit
     else
-      targetLocation = pos: target.pos, range: 0
-      path = getPath unit.pos, targetLocation
+      location = pos: target.pos, range: 1
+      path = getPath unit.pos, location
       moveBy path, unit
-  # Target is an energy source so go mine it
-  else if target.energy?
-    if unit.harvest(target) == ERR_NOT_IN_RANGE
-      targetLocation = pos: target.pos, range: 1
-      path = getPath unit.pos, targetLocation
-      moveBy path, unit
-  # Target is an expiring unit so go take its place
-  else if target.name?  # All sources currently occupied so get ready to replace dying unit
-    targetLocation = pos: target.pos, range: 1
-    path = getPath unit.pos, targetLocation
-    moveBy path, unit
+
 
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
@@ -82,7 +73,7 @@ collect = (unit) ->
 build = (unit) ->
   unit.memory.buildTarget or= buildTarget unit
   target = Game.getObjectById(unit.memory.buildTarget)
-  if not target? or not target.room?
+  if not target? or not target.room or not target.progress?
     unit.memory.buildTarget = buildTarget unit
     target = Game.getObjectById(unit.memory.buildTarget)
     if not target?
@@ -110,8 +101,8 @@ resupply = (unit) ->
     resources.push(storesFound...) if storesFound?
     resources.push(tombsFound...) if tombsFound?
 
-  resourceLocations = map resources, (r) => pos: r.pos, range: 1
-  path = getPath unit.pos, resourceLocations
+  locations = map resources, (r) => pos: r.pos, range: 1
+  path = getPath unit.pos, locations
   if path.path.length
     moveBy path, unit
   else
@@ -149,7 +140,7 @@ maintain = (unit) ->
     unit.memory.maintainInitialHits = undefined
     return false
   unit.memory.maintainInitialHits or= target.hits
-  if target.hits == target.hitsMax or target.hits >= unit.memory.maintainInitialHits + 50000
+  if target.hits == target.hitsMax or target.hits >= unit.memory.maintainInitialHits + 25000
     unit.memory.maintainTarget = maintainTarget unit
     target = Game.getObjectById(unit.memory.maintainTarget)
     if not target?
@@ -172,8 +163,8 @@ refillTower = (unit) ->
     towers.push(towersFound...) if towersFound?
 
   return false if not towers.length
-  towerLocations = map towers, (t) => pos: t.pos, range: 1
-  path = getPath unit.pos, towerLocations
+  locations = map towers, (t) => pos: t.pos, range: 1
+  path = getPath unit.pos, locations
   if path.path.length
     moveBy path, unit
   else
@@ -185,12 +176,12 @@ reserve = (unit) ->
   target = flags[unit.memory.target]
   room = rooms[target.pos.roomName]
   if not room?
-    targetLocation = pos: target.pos, range: 1
-    path = getPath unit.pos, targetLocation
+    location = pos: target.pos, range: 1
+    path = getPath unit.pos, location
     moveBy path, unit
   else if unit.reserveController(room.controller) == ERR_NOT_IN_RANGE
-    targetLocation = pos: room.controller.pos, range: 1
-    path = getPath unit.pos, targetLocation
+    location = pos: room.controller.pos, range: 1
+    path = getPath unit.pos, location
     moveBy path, unit
 
 claim = (unit) ->
@@ -198,20 +189,20 @@ claim = (unit) ->
   target = flags[unit.memory.target]
   room = rooms[target.pos.roomName]
   if not room?
-    targetLocation = pos: target.pos, range: 1
-    path = getPath unit.pos, targetLocation
+    location = pos: target.pos, range: 1
+    path = getPath unit.pos, location
     moveBy path, unit
   else
     controller = room.controller
     if controller.owner? and not controller.my
       if unit.attackController(controller) == ERR_NOT_IN_RANGE
-        targetLocation = pos: room.controller.pos, range: 1
-        path = getPath unit.pos, targetLocation
+        location = pos: room.controller.pos, range: 1
+        path = getPath unit.pos, location
         moveBy path, unit
     else
       if unit.claimController(controller) == ERR_NOT_IN_RANGE
-        targetLocation = pos: room.controller.pos, range: 1
-        path = getPath unit.pos, targetLocation
+        location = pos: room.controller.pos, range: 1
+        path = getPath unit.pos, location
         moveBy path, unit
 
 invade = (unit) ->

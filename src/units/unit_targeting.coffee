@@ -65,31 +65,11 @@ upgradeTarget = (unit) ->
   return (sample candidates).controller.id
 
 harvestTarget = (unit) ->
-  # See if there is an available container to sit on
-  mines = []
   for room in shuffle values rooms
-    roomMines = filter(room.find(FIND_STRUCTURES),
-                      (m) -> m.structureType is STRUCTURE_CONTAINER)
-    availableMines = filter(roomMines, (m) -> not any(m.id is u.memory.target for u in values(units)))
-    mines.push roomMines
-    if availableMines.length
-      return (sample availableMines).id
-  # See if there is any other available energy source
-# for room in shuffle values rooms
-#   sources = filter(room.find(FIND_SOURCES),
-#                   (s) -> not any(m in s.pos.findInRange(FIND_STRUCTURES, 1) for m in mines) and \
-#                          not any(u.memory.target is s.id for u in values units))
-#   if sources.length
-#     return (sample sources).id
-
-  # Replace the harvester that is closest to death
-# expiringHarvester = minBy(filter(units,
-#                                 (u) => u.memory.role is roles.HARVESTER and
-#                                        not any (u.memory.target is u.id for u in values units)),
-#                          'ticksToLive')
-# if expiringHarvester?
-#   return expiringHarvester.id
-
+    sources = filter room.find(FIND_SOURCES),
+                     (s) -> not any(u.memory.target is s.id for u in values units)
+    if sources.length
+      return (sample sources).id
   return undefined
 
 defendTarget = (unit) ->
@@ -125,10 +105,10 @@ repairTarget = (unit) ->
   for room in values rooms
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
-                                              (if s.my? then s.my else false) and \
-                                             ((s.hits < s.hitsMax and s.hits < 3500) or
-                                              (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
-                                              not any (u.memory.repairTarget is s.id for u in values units)
+                                               (if s.my? then s.my else s.structureType is STRUCTURE_ROAD) and \
+                                               ((s.hits < s.hitsMax and s.hits <= 2500) or
+                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
+                                               not any (u.memory.repairTarget is s.id for u in values units)
     structures.push(structuresFound...) if structuresFound?
   return undefined if not structures.length
   closest = unit.pos.findClosestByPath structures

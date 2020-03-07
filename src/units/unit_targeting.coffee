@@ -107,7 +107,8 @@ repairTarget = (unit) ->
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                                (if s.my? then s.my else s.structureType is STRUCTURE_ROAD) and \
                                                ((s.hits < s.hitsMax and s.hits <= 2500) or
-                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000)) and \
+                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000) or
+                                               (s.structureType is STRUCTURE_RAMPART and s.hits < 50000)) and \
                                                not any (u.memory.repairTarget is s.id for u in values units)
     structures.push(structuresFound...) if structuresFound?
   return undefined if not structures.length
@@ -145,6 +146,28 @@ buildTarget = (unit) ->
     return closest.id
   return (sample sites).id
 
+resupplyTarget = (unit) ->
+  resources = []
+  for room in values rooms
+    droppedFound = room.find FIND_DROPPED_RESOURCES,
+                             filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY) and \
+                                            r.resourceType is RESOURCE_ENERGY
+    tombsFound = room.find FIND_TOMBSTONES,
+                           filter: (t) => t.store[RESOURCE_ENERGY] > unit.store.getCapacity(RESOURCE_ENERGY)
+    storesFound = room.find FIND_STRUCTURES,
+                            filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
+                                            s.structureType is STRUCTURE_STORAGE) and \
+                                            s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
+    resources.push(droppedFound...) if droppedFound?
+    resources.push(storesFound...) if storesFound?
+    resources.push(tombsFound...) if tombsFound?
+
+  target = unit.pos.findClosestByRange resources
+  if not target?
+    target = (sample resources).id
+  return if target? then target.id else undefined
+
+
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    maintainTarget, buildTarget, collectTarget, transferTarget,
-                   defendTarget, claimTarget }
+                   defendTarget, claimTarget, resupplyTarget }

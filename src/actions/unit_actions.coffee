@@ -1,10 +1,10 @@
 { filter, map, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
-{ getPath, moveTo, moveBy } = require 'paths'
+{ getPath, moveTo, moveBy, goTo } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
   maintainTarget, buildTarget, collectTarget, transferTarget,
-  defendTarget, claimTarget } = require 'unit_targeting'
+  defendTarget, claimTarget, resupplyTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
 
 upgrade = (unit) ->
@@ -12,8 +12,7 @@ upgrade = (unit) ->
   controller = Game.getObjectById(unit.memory.target)
   if unit.upgradeController(controller) == ERR_NOT_IN_RANGE
     location = pos: controller.pos, range: 3
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
 
 harvest = (unit) ->
   unit.memory.target or= harvestTarget unit
@@ -28,13 +27,10 @@ harvest = (unit) ->
     container = target.pos.findClosestByRange STRUCTURE_CONTAINER
     if container?
       location = pos: container.pos, range: 0
-      path = getPath unit.pos, location
-      moveBy path, unit
+      goTo location, unit
     else
       location = pos: target.pos, range: 1
-      path = getPath unit.pos, location
-      moveBy path, unit
-
+      goTo location, unit
 
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
@@ -47,8 +43,7 @@ transfer = (unit) ->
       return false
   if unit.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
     location = pos: target.pos, range: 1
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
   else
     unit.memory.target = undefined
 
@@ -66,9 +61,24 @@ collect = (unit) ->
     unit.memory.target = undefined
   else
     location = pos: target.pos, range: 1
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
   return true
+
+resupply = (unit) ->
+  unit.memory.resupplyTarget or= resupplyTarget unit
+  target = Game.getObjectById(unit.memory.resupplyTarget)
+  if not target? or not target.room?
+    unit.memory.resupplyTarget = resupplyTarget unit
+    target = Game.getObjectById(unit.memory.resupplyTarget)
+    if not target?
+      unit.memory.resupplyTarget = undefined
+      return false
+  if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
+    unit.memory.resupplyTarget = undefined
+    unit.memory.working = true
+  else
+    location = pos: target.pos, range: 1
+    goTo location, unit
 
 build = (unit) ->
   unit.memory.buildTarget or= buildTarget unit
@@ -81,34 +91,8 @@ build = (unit) ->
       return false
   if unit.build(target) == ERR_NOT_IN_RANGE
     location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
   return true
-
-resupply = (unit) ->
-  resources = []
-  for room in values rooms
-    droppedFound = room.find FIND_DROPPED_RESOURCES,
-                             filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY) and \
-                                            r.resourceType is RESOURCE_ENERGY
-    tombsFound = room.find FIND_TOMBSTONES,
-                           filter: (t) => t.store[RESOURCE_ENERGY] > unit.store.getCapacity(RESOURCE_ENERGY)
-    storesFound = room.find FIND_STRUCTURES,
-                            filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
-                                            s.structureType is STRUCTURE_STORAGE) and \
-                                            s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
-    resources.push(droppedFound...) if droppedFound?
-    resources.push(storesFound...) if storesFound?
-    resources.push(tombsFound...) if tombsFound?
-
-  locations = map resources, (r) => pos: r.pos, range: 1
-  path = getPath unit.pos, locations
-  if path.path.length
-    moveBy path, unit
-  else
-    target = unit.pos.findClosestByRange resources, RESOURCE_ENERGY
-    if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
-      unit.memory.working = true
 
 repair = (unit) ->
   unit.memory.repairTarget or= repairTarget unit
@@ -128,8 +112,7 @@ repair = (unit) ->
     unit.memory.repairInitialHits = target.hits
   if unit.repair(target) == ERR_NOT_IN_RANGE
     location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
   return true
 
 maintain = (unit) ->
@@ -150,8 +133,7 @@ maintain = (unit) ->
     unit.memory.maintainInitialHits = target.hits
   if unit.repair(target) == ERR_NOT_IN_RANGE
     location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
   return true
 
 refillTower = (unit) ->
@@ -177,12 +159,10 @@ reserve = (unit) ->
   room = rooms[target.pos.roomName]
   if not room?
     location = pos: target.pos, range: 1
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
   else if unit.reserveController(room.controller) == ERR_NOT_IN_RANGE
     location = pos: room.controller.pos, range: 1
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
 
 claim = (unit) ->
   unit.memory.target or= claimTarget unit
@@ -190,20 +170,17 @@ claim = (unit) ->
   room = rooms[target.pos.roomName]
   if not room?
     location = pos: target.pos, range: 1
-    path = getPath unit.pos, location
-    moveBy path, unit
+    goTo location, unit
   else
     controller = room.controller
     if controller.owner? and not controller.my
       if unit.attackController(controller) == ERR_NOT_IN_RANGE
         location = pos: room.controller.pos, range: 1
-        path = getPath unit.pos, location
-        moveBy path, unit
+        goTo location, unit
     else
       if unit.claimController(controller) == ERR_NOT_IN_RANGE
         location = pos: room.controller.pos, range: 1
-        path = getPath unit.pos, location
-        moveBy path, unit
+        goTo location, unit
 
 invade = (unit) ->
   targetRoom = Game.flags['invade'].pos.roomName
@@ -228,13 +205,11 @@ defend = (unit) ->
     when roles.MEDIC
       if not heal unit
         location = pos: target.pos, range: 5
-        path = getPath unit.pos, location
-        moveBy path, unit
+        goTo location, unit
     else
       if not attackUnit unit
         location = pos: target.pos, range: 5
-        path = getPath unit.pos, location
-        moveBy path, unit
+        goTo location, unit
 
 attackUnit = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS

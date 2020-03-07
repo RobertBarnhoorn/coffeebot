@@ -13,28 +13,29 @@ moveTo = (location, unit) ->
                                                      opacity: .1
 
 goTo = (location, unit) ->
-  cachedPrevPrevLoc = if unit.memory.prevLoc then unit.memory.prevLoc else unit.pos
-  prevPrevLoc = new RoomPosition(cachedPrevPrevLoc.x, cachedPrevPrevLoc.y, cachedPrevPrevLoc.roomName)
-  cachedPrevLoc = if unit.memory.loc? then unit.memory.loc else unit.pos
-  prevLoc = new RoomPosition(cachedPrevLoc.x, cachedPrevLoc.y, cachedPrevLoc.roomName)
-  currLoc = unit.pos
-  # Resolve stuck units
-  if unit.fatigue is 0 and (currLoc.isEqualTo(prevLoc) or currLoc.isEqualTo(prevPrevLoc))
-    if unit.memory.stuck
-      path = getPath unit.pos, location, withUnits=true
-    else
-      unit.memory.stuck = true
+  prevLoc = unit.memory.prevLoc ? {x: unit.pos.x, y: unit.pos.y}
+  prevPrevLoc = unit.memory.prevPrevLoc ? {x: unit.pos.x, y: unit.pos.y}
+  if unit.pos.isEqualTo(prevLoc.x, prevLoc.y) or unit.pos.isEqualTo(prevPrevLoc.x, prevPrevLoc.y)
+    unit.memory.ttl -= 1
   else
-    unit.memory.stuck = false
+    unit.memory.ttl = 4
+  if unit.memory.ttl <= 0
+    path = getPath(unit.pos, location, withUnits=true).path
+    unit.memory.path = path
 
-  path or= getPath unit.pos, location
+  path or= unit.memory.path
+  if not path?
+    path = getPath(unit.pos, location).path
+    unit.memory.path = path
+
+  unit.memory.prevPrevLoc = x: prevLoc.x, y: prevLoc.y
+  unit.memory.prevLoc = x: unit.pos.x, y: unit.pos.y
   moveBy path, unit
-  unit.memory.prevLoc = prevLoc
-  unit.memory.loc = currLoc
+  console.log unit
 
 moveBy = (path, unit) ->
-  unit.room.visual.poly (p for p in path.path when p.roomName is unit.room.name)
-  unit.moveByPath path.path
+  unit.room.visual.poly (p for p in path when p.roomName is unit.room.name)
+  unit.moveByPath path
 
 getPath = (pos, loc, withUnits=false) ->
   if withUnits
@@ -55,7 +56,7 @@ getCostMatrix = (roomName) ->
     costMatrices[room.name] = costMatrix
     return costMatrix
 
-  room.memory.ttl = 25
+  room.memory.ttl = 100
   costMatrix = generateCostMatrix roomName
   room.memory.costMatrix = costMatrix.serialize()
   costMatrices[room.name] = costMatrix

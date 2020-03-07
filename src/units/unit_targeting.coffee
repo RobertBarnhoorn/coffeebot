@@ -8,23 +8,46 @@
 
 transferTarget = (unit) ->
   structures = []
-  for room in values rooms
+  structure = unit.pos.findClosestByPath FIND_MY_STRUCTURES,
+                                         filter: (s) => s.energy < s.energyCapacity and \
+                                                        s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
+  return structure.id if structure?
+  return unit.room.storage.id if unit.room.storage?
+
+  for room in shuffle values rooms
     structuresFound = room.find FIND_MY_STRUCTURES,
                                 filter: (s) => s.energy < s.energyCapacity and \
                                                           s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
-    structures.push(structuresFound...) if structuresFound?
+    if structuresFound.length
+      return (sample structuresFound).id
 
-  if structures.length
-    closest = unit.pos.findClosestByPath structures
-    if closest?
-      return closest.id
-    return (sample structures).id
-
-  return (sample rooms).storage.id
+  return undefined
 
 collectTarget = (unit) ->
+  unitCapacity = unit.store.getCapacity(RESOURCE_ENERGY)
   resources = []
-  for room in values rooms
+  room = unit.room
+  resourcesFound = room.find FIND_DROPPED_RESOURCES,
+                             filter: (r) => r.resourceType is RESOURCE_ENERGY and \
+                                            r.amount > unitCapacity
+  containersFound = room.find FIND_STRUCTURES,
+                              filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
+                                             s.store[RESOURCE_ENERGY] > unitCapacity
+  tombsFound = room.find FIND_TOMBSTONES,
+                         filter: (t) => t.store[RESOURCE_ENERGY] > unitCapacity
+  ruinsFound = room.find FIND_RUINS,
+                         filter: (r) => r.store[RESOURCE_ENERGY] > unitCapacity
+  resources.push(resourcesFound...) if resourcesFound?
+  resources.push(containersFound...) if containersFound?
+  resources.push(tombsFound...) if tombsFound?
+  resources.push(ruinsFound...) if ruinsFound?
+
+  if resources.length
+    closest = unit.pos.findClosestByPath(resources)
+    return closest.id
+
+  resources = []
+  for room in shuffle values rooms
     resourcesFound = room.find FIND_DROPPED_RESOURCES,
                                filter: (r) => r.resourceType is RESOURCE_ENERGY
     containersFound = room.find FIND_STRUCTURES,
@@ -40,13 +63,12 @@ collectTarget = (unit) ->
 
   prioritized = resources.sort((a, b) => (if b.amount? then b.amount else b.store[RESOURCE_ENERGY]) - \
                                          (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
-                         .slice(0, Math.floor(Math.sqrt(resources.length)))
-
-  return undefined if not prioritized.length
-  closest = unit.pos.findClosestByPath prioritized
-  if closest?
-    return closest.id
-  return (sample prioritized).id
+                         .slice(0, Math.ceil(Math.sqrt(resources.length)))
+  if prioritized.length
+    closest = unit.pos.findClosestByPath prioritized
+    return closest.id if closest?
+    return (sample prioritized).id
+  return undefined
 
 upgradeTarget = (unit) ->
   candidates = (room for room in values rooms \

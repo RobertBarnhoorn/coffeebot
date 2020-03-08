@@ -43,7 +43,7 @@ collectTarget = (unit) ->
   resources.push(ruinsFound...) if ruinsFound?
 
   if resources.length
-    closest = unit.pos.findClosestByPath(resources)
+    closest = unit.pos.findClosestByPath resources
     return closest.id if closest?
   return undefined
 
@@ -189,7 +189,27 @@ resupplyTarget = (unit) ->
     target = (sample resources).id
   return if target? then target.id else undefined
 
+refillTarget = (unit) ->
+  towersFound = unit.room.find FIND_MY_STRUCTURES,
+                               filter: (s) => s.structureType is STRUCTURE_TOWER and \
+                                              s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
+  closest = unit.pos.findClosestByPath towersFound
+  if closest?
+    return closest.id
+
+  towers = []
+  for room in values rooms
+    towersFound = room.find FIND_MY_STRUCTURES,
+                            filter: (s) => s.structureType is STRUCTURE_TOWER and \
+                                           s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
+    towers.push(towersFound...) if towersFound?
+
+  return undefined if not towers.length
+  return (sample towers).id
+
+  
+
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    maintainTarget, buildTarget, collectTarget, transferTarget,
-                   defendTarget, claimTarget, resupplyTarget }
+                   defendTarget, claimTarget, resupplyTarget, refillTarget }

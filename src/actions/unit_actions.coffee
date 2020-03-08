@@ -4,7 +4,7 @@
 { getPath, moveTo, moveBy, goTo } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
   maintainTarget, buildTarget, collectTarget, transferTarget,
-  defendTarget, claimTarget, resupplyTarget } = require 'unit_targeting'
+  defendTarget, claimTarget, resupplyTarget, refillTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
 
 upgrade = (unit) ->
@@ -138,20 +138,17 @@ maintain = (unit) ->
   return true
 
 refillTower = (unit) ->
-  towers = []
-  for room in values rooms
-    towersFound = room.find FIND_MY_STRUCTURES,
-                            filter: (s) => s.structureType is STRUCTURE_TOWER and \
-                                           s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
-    towers.push(towersFound...) if towersFound?
-
-  return false if not towers.length
-  locations = map towers, (t) => pos: t.pos, range: 1
-  path = getPath unit.pos, locations
-  if path.path.length
-    moveBy path, unit
-  else
-    unit.transfer unit.pos.findClosestByRange(towers), RESOURCE_ENERGY
+  unit.memory.refillTarget or= refillTarget unit
+  target = Game.getObjectById(unit.memory.refillTarget)
+  if not target? or not target.room?
+    unit.memory.refillTarget = refillTarget unit
+    target = Game.getObjectById(unit.memory.refillTarget)
+    if not target?
+      unit.memory.refillTarget = undefined
+      return false
+  if unit.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+    location = pos: target.pos, range: 1
+    goTo location, unit
   return true
 
 reserve = (unit) ->

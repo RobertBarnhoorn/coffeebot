@@ -18,30 +18,61 @@ goTo = (location, unit) ->
   if unit.pos.isEqualTo(prevLoc.x, prevLoc.y) or unit.pos.isEqualTo(prevPrevLoc.x, prevPrevLoc.y)
     unit.memory.ttl -= 1
   else
-    unit.memory.ttl = 4
+    unit.memory.ttl = 3
   if unit.memory.ttl <= 0
     path = getPath(unit.pos, location, withUnits=true).path
-    unit.memory.path = path
 
-  path or= unit.memory.path
+  path or= deserializePath unit.memory.path
   if not path?
     path = getPath(unit.pos, location).path
-    unit.memory.path = path
 
   unit.memory.prevPrevLoc = x: prevLoc.x, y: prevLoc.y
   unit.memory.prevLoc = x: unit.pos.x, y: unit.pos.y
   moveBy path, unit
-  console.log unit
+  unit.memory.path = serializePath path
 
 moveBy = (path, unit) ->
   unit.room.visual.poly (p for p in path when p.roomName is unit.room.name)
-  unit.moveByPath path
+  if unit.moveByPath(path) is OK
+    path.shift()
 
 getPath = (pos, loc, withUnits=false) ->
   if withUnits
     PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrixWithUnits, maxOps: 5000
   else
     PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 5000
+
+serializePath = (path) ->
+  serializeRoomPos = (pos) -> pos.x + ',' + pos.y + ',' + pos.roomName
+  serialized = ''
+  forEach path, (p) ->
+    serialized += (serializeRoomPos(p) + ' ')
+  return serialized
+
+deserializePath = (pathStr) ->
+  return [] if not pathStr? or not pathStr.length
+  deserialized = []
+  x = ''
+  y = ''
+  roomName = ''
+  index = 0
+  forEach pathStr, (c) ->
+    switch c
+      when ' '
+        deserialized.push(new RoomPosition(parseInt(x), parseInt(y), roomName))
+        index = 0
+        x = ''
+        y = ''
+        roomName = ''
+      when ','
+        index++
+      else
+        switch index
+          when 0 then x += c
+          when 1 then y += c
+          when 2 then roomName += c
+
+  return deserialized
 
 getCostMatrix = (roomName) ->
   costMatrix = costMatrices[roomName]

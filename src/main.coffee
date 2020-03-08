@@ -6,7 +6,7 @@
 { readMem, writeMem } = require 'memory'
 
 module.exports.loop = ->
-  console.log cpuBucket
+  #console.log cpuBucket
   do garbageCollection
   do towerManagement
   do failSafe

@@ -103,7 +103,7 @@ repair = (unit) ->
     unit.memory.repairInitialHits = undefined
     return false
   unit.memory.repairInitialHits or= target.hits
-  if target.hits == target.hitsMax or target.hits >= unit.memory.repairInitialHits + 25000
+  if target.hits >= target.hitsMax or target.hits >= unit.memory.repairInitialHits + 50000
     unit.memory.repairTarget = repairTarget unit
     target = Game.getObjectById(unit.memory.repairTarget)
     if not target?

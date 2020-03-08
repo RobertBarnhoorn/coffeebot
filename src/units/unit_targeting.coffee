@@ -45,10 +45,9 @@ collectTarget = (unit) ->
   if resources.length
     closest = unit.pos.findClosestByPath resources
     return closest.id if closest?
-  return undefined
 
   resources = []
-  for room in shuffle values rooms
+  for room in values rooms
     resourcesFound = room.find FIND_DROPPED_RESOURCES,
                                filter: (r) => r.resourceType is RESOURCE_ENERGY
     containersFound = room.find FIND_STRUCTURES,
@@ -66,8 +65,7 @@ collectTarget = (unit) ->
                                          (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
                          .slice(0, Math.ceil(Math.sqrt(resources.length)))
   if prioritized.length
-    closest = unit.pos.findClosejtByPath prioritized
-    return closest.id if closest?
+    return (sample prioritized).id
   return undefined
 
 upgradeTarget = (unit) ->
@@ -128,7 +126,7 @@ repairTarget = (unit) ->
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                                (if s.my? then s.my else s.structureType is STRUCTURE_ROAD) and \
-                                               ((s.hits < s.hitsMax and s.hits <= 2500) or
+                                               ((s.hits < s.hitsMax and s.hits <= 2000) or
                                                (s.structureType is STRUCTURE_CONTAINER and s.hits < 200000) or
                                                (s.structureType is STRUCTURE_RAMPART and s.hits < 50000)) and \
                                                not any (u.memory.repairTarget is s.id for u in values units)
@@ -186,8 +184,9 @@ resupplyTarget = (unit) ->
 
   target = unit.pos.findClosestByRange resources
   if not target?
-    target = (sample resources).id
-  return if target? then target.id else undefined
+    target = (sample resources)
+  return target.id if target?
+  return undefined
 
 refillTarget = (unit) ->
   towersFound = unit.room.find FIND_MY_STRUCTURES,
@@ -206,9 +205,6 @@ refillTarget = (unit) ->
 
   return undefined if not towers.length
   return (sample towers).id
-
-  
-
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    maintainTarget, buildTarget, collectTarget, transferTarget,

@@ -29,14 +29,14 @@ collectTarget = (unit) ->
   room = unit.room
   resourcesFound = room.find FIND_DROPPED_RESOURCES,
                              filter: (r) => r.resourceType is RESOURCE_ENERGY and \
-                                            r.amount > unitCapacity
+                                            r.amount >= unitCapacity
   containersFound = room.find FIND_STRUCTURES,
                               filter: (s) => s.structureType is STRUCTURE_CONTAINER and \
-                                             s.store[RESOURCE_ENERGY] > unitCapacity
+                                             s.store[RESOURCE_ENERGY] >= unitCapacity
   tombsFound = room.find FIND_TOMBSTONES,
-                         filter: (t) => t.store[RESOURCE_ENERGY] > unitCapacity
+                         filter: (t) => t.store[RESOURCE_ENERGY] >= unitCapacity
   ruinsFound = room.find FIND_RUINS,
-                         filter: (r) => r.store[RESOURCE_ENERGY] > unitCapacity
+                         filter: (r) => r.store[RESOURCE_ENERGY] >= unitCapacity
   resources.push(resourcesFound...) if resourcesFound?
   resources.push(containersFound...) if containersFound?
   resources.push(tombsFound...) if tombsFound?
@@ -44,7 +44,8 @@ collectTarget = (unit) ->
 
   if resources.length
     closest = unit.pos.findClosestByPath(resources)
-    return closest.id
+    return closest.id if closest?
+  return undefined
 
   resources = []
   for room in shuffle values rooms
@@ -65,9 +66,8 @@ collectTarget = (unit) ->
                                          (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
                          .slice(0, Math.ceil(Math.sqrt(resources.length)))
   if prioritized.length
-    closest = unit.pos.findClosestByPath prioritized
+    closest = unit.pos.findClosejtByPath prioritized
     return closest.id if closest?
-    return (sample prioritized).id
   return undefined
 
 upgradeTarget = (unit) ->

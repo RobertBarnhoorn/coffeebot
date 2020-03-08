@@ -13,6 +13,12 @@ moveTo = (location, unit) ->
                                                      opacity: .1
 
 goTo = (location, unit) ->
+  # If the target destination has changed we need to recalculate the path
+  prevDest = unit.memory.prevDest ? {x: location.pos.x, y: location.pos.y, range: location.range}
+  if prevDest.x isnt location.pos.x or prevDest.y isnt location.pos.y or prevDest.range isnt location.range
+    path = getPath(unit.pos, location).path
+
+  # If the unit is stuck we need to recalculate the path, factoring in other units in its way
   prevLoc = unit.memory.prevLoc ? {x: unit.pos.x, y: unit.pos.y}
   prevPrevLoc = unit.memory.prevPrevLoc ? {x: unit.pos.x, y: unit.pos.y}
   if unit.pos.isEqualTo(prevLoc.x, prevLoc.y) or unit.pos.isEqualTo(prevPrevLoc.x, prevPrevLoc.y)
@@ -20,15 +26,17 @@ goTo = (location, unit) ->
   else
     unit.memory.ttl = 3
   if unit.memory.ttl <= 0
-    path = getPath(unit.pos, location, withUnits=true).path
+    path = getPath(unit.pos, location, includeNonStatic=true).path
 
+  # If there is a path cached in memory then use it, otherwise recalculate
   path or= deserializePath unit.memory.path
   if not path?
     path = getPath(unit.pos, location).path
 
+  moveBy path, unit
   unit.memory.prevPrevLoc = x: prevLoc.x, y: prevLoc.y
   unit.memory.prevLoc = x: unit.pos.x, y: unit.pos.y
-  moveBy path, unit
+  unit.memory.prevDest = x: location.pos.x, y: location.pos.y, range: location.range
   unit.memory.path = serializePath path
 
 moveBy = (path, unit) ->
@@ -36,11 +44,11 @@ moveBy = (path, unit) ->
   if unit.moveByPath(path) is OK
     path.shift()
 
-getPath = (pos, loc, withUnits=false) ->
-  if withUnits
-    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrixWithUnits, maxOps: 5000
+getPath = (pos, loc, includeNonStatic=false) ->
+  if includeNonStatic
+    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrixIncludeNonStatic, maxOps: 10000
   else
-    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 5000
+    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 10000
 
 serializePath = (path) ->
   serializeRoomPos = (pos) -> pos.x + ',' + pos.y + ',' + pos.roomName
@@ -93,9 +101,9 @@ getCostMatrix = (roomName) ->
   costMatrices[room.name] = costMatrix
   return costMatrix
 
-generateCostMatrixWithUnits = (roomName) -> generateCostMatrix(roomName, withUnits=true)
+generateCostMatrixIncludeNonStatic= (roomName) -> generateCostMatrix(roomName, includeNonStatic=true)
 
-generateCostMatrix = (roomName, withUnits=false) ->
+generateCostMatrix = (roomName, includeNonStatic=false) ->
   room = Game.rooms[roomName]
   return if not room?
   costs = new PathFinder.CostMatrix
@@ -113,7 +121,7 @@ generateCostMatrix = (roomName, withUnits=false) ->
       (s.structureType isnt STRUCTURE_RAMPART or not s.my)
       costs.set s.pos.x, s.pos.y, 0xff
 
-  if withUnits
+  if includeNonStatic
     forEach room.find(FIND_CREEPS), (c) ->
       costs.set c.pos.x, c.pos.y, 0xff
 

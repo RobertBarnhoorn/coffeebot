@@ -21,7 +21,7 @@ goTo = (location, unit) ->
   # If the unit is stuck we need to recalculate the path, factoring in other units in its way
   prevLoc = unit.memory.prevLoc ? {x: unit.pos.x, y: unit.pos.y}
   prevPrevLoc = unit.memory.prevPrevLoc ? {x: unit.pos.x, y: unit.pos.y}
-  if unit.pos.isEqualTo(prevLoc.x, prevLoc.y) or unit.pos.isEqualTo(prevPrevLoc.x, prevPrevLoc.y)
+  if not unit.spawning and unit.pos.isEqualTo(prevLoc.x, prevLoc.y) or unit.pos.isEqualTo(prevPrevLoc.x, prevPrevLoc.y)
     unit.memory.ttl -= 1
   else
     unit.memory.ttl = 3

@@ -6,9 +6,9 @@
 { readMem, writeMem } = require 'memory'
 
 module.exports.loop = ->
-  # console.log cpuBucket
   do garbageCollection
   do towerManagement
   do failSafe
   do populationControl
   do unitManagement
+  console.log cpuUsed()

@@ -92,11 +92,10 @@ harvestTarget = (unit) ->
       return (sample sources).id
   return undefined
 
-defendTarget = (unit) ->
-  targets = map(filter(flags, (f) => f.color is flag_intents.DEFEND),
+flagTarget = (unit, flag_intent) ->
+  targets = map(filter(flags, (f) => f.color is flag_intent),
                (f) => f.name)
   if targets.length
-    # Go to the defensive flag which has fewest defensive units
     return sample targets
   return undefined
 
@@ -206,6 +205,8 @@ refillTarget = (unit) ->
   return undefined if not towers.length
   return (sample towers).id
 
+
+
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    maintainTarget, buildTarget, collectTarget, transferTarget,
-                   defendTarget, claimTarget, resupplyTarget, refillTarget }
+                   flagTarget, claimTarget, resupplyTarget, refillTarget }

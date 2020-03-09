@@ -6,7 +6,7 @@
 { upgrade, harvest, transfer, build,
   repair, maintain, refillTower, shouldWork,
   moveTo, resupply, collect, reserve,
-  claim, invade, defend } = require 'unit_actions'
+  claim, invade, defend, patrol } = require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit
@@ -38,37 +38,27 @@ reserver = (unit) ->
 claimer = (unit) ->
   claim unit
 
-soldier = (unit) ->
-  if unit.memory.defending
+militant = (unit) ->
+  if unit.memory.patrolling
+    patrol unit
+  else if unit.memory.defending
     defend unit
   else if unit.memory.attacking
+    attack unit
+  else if unit.memory.invading
     invade unit
   else
-    unit.memory.defending = filter(flags, (f) => f.color is flag_intents.DEFEND)?
-    unit.memory.attacking = shouldInvade()
+    # In order of priority, try find an activity to do
+    defending = filter(flags, (f) => f.color is flag_intents.DEFEND).length > 0
+    unit.memory.defending = defending
+    return if defending
+    attacking = filter(flags, (f) => f.color is flag_intents.ATTACK).length > 0
+    unit.memory.attacking = attacking
+    return if attacking
+    invading = filter(flags, (f) => f.color is flag_intents.INVADE).length > 0
+    unit.memory.invading = invading
+    return if attacking
+    patrolling = filter(flags, (f) => f.color is flag_intents.PATROL).length > 0
+    unit.memory.patrolling = patrolling
 
-sniper = (unit) ->
-  if unit.memory.defending
-    defend unit
-  else if unit.memory.attacking
-    invade unit
-  else
-    unit.memory.defending = filter(flags, (f) => f.color is flag_intents.DEFEND)?
-    unit.memory.attacking = shouldInvade()
-
-medic = (unit) ->
-  if unit.memory.defending
-    defend unit
-  else if unit.memory.attacking
-    invade unit
-  else
-    unit.memory.defending = filter(flags, (f) => f.color is flag_intents.DEFEND)?
-    unit.memory.attacking = shouldInvade()
-
-shouldInvade =->
-  actual = {}
-  actual[v] = 0 for v in values roles
-  merge actual, countBy(filter(units, (u) => not u.spawning), 'memory.role')
-  actual[roles.MEDIC] >= 3 and actual[roles.SOLDIER] >= 2 and actual[roles.SNIPER] >= 2
-
-module.exports = { harvester, upgrader, engineer, transporter, reserver, claimer, soldier, sniper, medic }
+module.exports = { harvester, upgrader, engineer, transporter, reserver, claimer, militant }

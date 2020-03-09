@@ -1,10 +1,10 @@
-{ filter, map, values } = require 'lodash'
+{ countBy, filter, map, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy, goTo } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
   maintainTarget, buildTarget, collectTarget, transferTarget,
-  defendTarget, claimTarget, resupplyTarget, refillTarget } = require 'unit_targeting'
+  flagTarget, claimTarget, resupplyTarget, refillTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
 
 upgrade = (unit) ->
@@ -181,33 +181,81 @@ claim = (unit) ->
         goTo location, unit
 
 invade = (unit) ->
-  targetRoom = Game.flags['invade'].pos.roomName
-  if unit.room.name isnt targetRoom
-    exit = unit.pos.findClosestByPath unit.room.findExitTo(targetRoom)
-    moveTo exit, unit
-  else
-    switch unit.memory.role
-      when roles.MEDIC then heal unit
-      else attackUnit(unit) or attackStructure(unit)
-
-defend = (unit) ->
-  unit.memory.target or= defendTarget unit
-  target = flags[unit.memory.target]
-  if not target?
-    unit.memory.target = defendTarget unit
-    target = flags[unit.memory.target]
-  if not target?
-    return
-
   switch unit.memory.role
     when roles.MEDIC
-      if not heal unit
-        location = pos: target.pos, range: 5
-        goTo location, unit
+      return if heal unit
     else
-      if not attackUnit unit
-        location = pos: target.pos, range: 5
-        goTo location, unit
+      return if attackUnit(unit) or attackStructure(unit)
+
+  unit.memory.shouldInvade or= shouldInvade()
+  if unit.memory.shouldInvade
+    unit.memory.target or= flagTarget unit, flag_intents.INVADE
+  else
+    unit.memory.target or= flagTarget unit, flag_intents.GARRISON
+
+  target = flags[unit.memory.target]
+  if not target?
+    unit.memory.target = flagTarget unit, flag_intents.INVADE
+    target = flags[unit.memory.target]
+  return if not target?
+
+  location = pos: target.pos, range: 1
+  goTo location, unit
+
+attack = (unit) ->
+  switch unit.memory.role
+    when roles.MEDIC
+      return if heal unit
+    else
+      return if attackUnit(unit) or attackStructure(unit)
+
+  unit.memory.target or= flagTarget unit, flag_intents.ATTACK
+  target = flags[unit.memory.target]
+  if not target?
+    unit.memory.target = flagTarget unit, flag_intents.ATTACK
+    target = flags[unit.memory.target]
+  return if not target?
+
+  location = pos: target.pos, range: 2
+  goTo location, unit
+
+defend = (unit) ->
+  switch unit.memory.role
+    when roles.MEDIC
+      return if heal unit
+    else
+      return if attackUnit unit
+
+  unit.memory.target or= flagTarget unit, flag_intents.DEFEND
+  target = flags[unit.memory.target]
+  if not target?
+    unit.memory.target = flagTarget unit, flag_intents.DEFEND
+    target = flags[unit.memory.target]
+  return if not target?
+
+  location = pos: target.pos, range: 1
+  goTo location, unit
+
+patrol = (unit) ->
+  switch unit.memory.role
+    when roles.MEDIC
+      return if heal unit
+    else
+      return if attackUnit unit
+
+  unit.memory.target or= flagTarget unit, flag_intents.PATROL
+  target = flags[unit.memory.target]
+  if not target?
+    unit.memory.target = flagTarget unit, flag_intents.PATROL
+    target = flags[unit.memory.target]
+  return if not target?
+
+  if unit.pos.inRangeTo(target.pos, 1)
+    unit.memory.target = flagTarget unit, flag_intents.PATROL
+    target = flags[unit.memory.target]
+  else
+    location = pos: target.pos, range: 1
+    goTo location, unit
 
 attackUnit = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS
@@ -242,7 +290,6 @@ heal = (unit) ->
     return true
   return false
 
-
 shouldWork = (unit) ->
   if unit.store.getFreeCapacity() is 0
     true
@@ -251,7 +298,14 @@ shouldWork = (unit) ->
   else
     unit.memory.working
 
+shouldInvade = ->
+  actual = {}
+  actual[v] = 0 for v in values roles
+  merge actual, countBy(filter(units, (u) => not u.spawning), 'memory.role')
+  actual[roles.MEDIC] >= 3 and actual[roles.SOLDIER] >= 2 and actual[roles.SNIPER] >= 2
+
 module.exports = { upgrade, harvest, transfer, build,
                    repair, maintain, refillTower, shouldWork,
                    moveTo, resupply, collect, claim,
-                   reserve, invade, defend }
+                   reserve, patrol, attack, invade,
+                   defend }

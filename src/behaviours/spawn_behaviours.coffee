@@ -99,60 +99,70 @@ spawnReserver = (s) ->
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 3
+  spawnUnit(s, role, body, memory) if body.length >= 2
 
 spawnClaimer = (s) ->
   role = roles.CLAIMER
   energy = maxEnergy(s)
   body = []
-  energy = putBodyPart(s, body, MOVE, energy)
-  energy = putBodyPart(s, body, ATTACK, energy)
   energy = putBodyPart(s, body, CLAIM, energy)
+  energy = putBodyPart(s, body, MOVE, energy)
+  memory =
+    role: role
+    working: false
+
+  spawnUnit(s, role, body, memory) if body.length >= 2
+
+spawnSoldier = (s) ->
+  role = roles.SOLDIER
+  energy = maxEnergy(s)
   loop
     energy = putBodyPart(s, body, MOVE, energy)
-    energy = putBodyPart(s, body, CLAIM, energy)
+    break if energy < minEnergy()
+    energy = putBodyPart(s, body, ATTACK, energy)
+    break if energy < minEnergy()
+    energy = putBodyPart(s, body, TOUGH, energy)
     break if energy < minEnergy()
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 3
-
-spawnSoldier = (s) ->
-  role = roles.SOLDIER
-  energy = maxEnergy(s)
-  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-          ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK]
-  memory =
-    role: role
-    working: false
-
-  spawnUnit(s, role, body, memory)
+  spawnUnit(s, role, body, memory) if body.length >= 2
 
 spawnSniper = (s) ->
   role = roles.SNIPER
   energy = maxEnergy(s)
-  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-          RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK]
+  body = []
+  loop
+    energy = putBodyPart(s, body, MOVE, energy)
+    break if energy < minEnergy()
+    energy = putBodyPart(s, body, RANGED_ATTACK, energy)
+    break if energy < minEnergy()
+    energy = putBodyPart(s, body, TOUGH, energy)
+    break if energy < minEnergy()
+
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory)
+  spawnUnit(s, role, body, memory) if body.length >= 2
 
 spawnMedic = (s) ->
   role = roles.MEDIC
   energy = maxEnergy(s)
-  body = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
-          MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-          HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL]
+  body = []
+  loop
+    energy = putBodyPart(s, body, MOVE, energy)
+    break if energy < minEnergy()
+    energy = putBodyPart(s, body, HEAL, energy)
+    break if energy < minEnergy()
+    energy = putBodyPart(s, body, TOUGH, energy)
+    break if energy < minEnergy()
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory)
+  spawnUnit(s, role, body, memory) if body.length >= 2
 
 putBodyPart = (s, body, part, energy) ->
   energy -= BODYPART_COST[part]

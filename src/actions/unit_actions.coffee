@@ -23,16 +23,22 @@ harvest = (unit) ->
     target = Game.getObjectById unit.memory.target
   if not target?
     unit.memory.target = undefined
-    return false
-  if unit.harvest(target) == ERR_NOT_IN_RANGE
+    return
+  if unit.memory.inPosition
+    unit.harvest(target)
+  else
     containers = target.pos.findInRange(FIND_STRUCTURES, 1,
                                        filter: (s) -> s.structureType is STRUCTURE_CONTAINER)
+
     if containers.length
       location = pos: containers[0].pos, range: 0
-      goTo location, unit
     else
       location = pos: target.pos, range: 1
-      goTo location, unit
+
+    if unit.pos.inRangeTo(location.pos, location.range)
+      unit.memory.inPosition = true
+    else
+    goTo location, unit
 
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit

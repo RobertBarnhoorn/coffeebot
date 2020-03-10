@@ -116,6 +116,7 @@ spawnClaimer = (s) ->
 spawnSoldier = (s) ->
   role = roles.SOLDIER
   energy = maxEnergy(s)
+  body = []
   loop
     energy = putBodyPart(s, body, MOVE, energy)
     break if energy < minEnergy()
@@ -127,7 +128,7 @@ spawnSoldier = (s) ->
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 2
+  spawnUnit(s, role, body, memory) if body.length >= 2 and body.length % 3 == 0
 
 spawnSniper = (s) ->
   role = roles.SNIPER
@@ -138,14 +139,12 @@ spawnSniper = (s) ->
     break if energy < minEnergy()
     energy = putBodyPart(s, body, RANGED_ATTACK, energy)
     break if energy < minEnergy()
-    energy = putBodyPart(s, body, TOUGH, energy)
-    break if energy < minEnergy()
 
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 2
+  spawnUnit(s, role, body, memory) if body.length >= 2 and body.length % 2 == 0
 
 spawnMedic = (s) ->
   role = roles.MEDIC
@@ -156,13 +155,11 @@ spawnMedic = (s) ->
     break if energy < minEnergy()
     energy = putBodyPart(s, body, HEAL, energy)
     break if energy < minEnergy()
-    energy = putBodyPart(s, body, TOUGH, energy)
-    break if energy < minEnergy()
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 2
+  spawnUnit(s, role, body, memory) if body.length >= 2 and body.length % 2 == 0
 
 putBodyPart = (s, body, part, energy) ->
   energy -= BODYPART_COST[part]

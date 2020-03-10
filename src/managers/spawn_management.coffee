@@ -8,7 +8,7 @@
 { generateUnit } = require 'spawn_behaviours'
 
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER,
-              roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER, roles.MEDIC]
+              roles.RESERVER, roles.CLAIMER, roles.SNIPER, roles.SOLDIER, roles.MEDIC]
 
 numRooms = (filter(rooms, (r) => r.controller? and r.controller.my)).length
 numSources = (flatten (s for s in r.find(FIND_SOURCES) for r in values rooms)).length
@@ -17,19 +17,19 @@ flagCount = countBy flags, 'color'
 desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * numSources
-    when roles.UPGRADER         then 2 * numSources
+    when roles.UPGRADER         then 1 * numSources
     when roles.ENGINEER         then 1 * numSources
-    when roles.TRANSPORTER      then 1 * numRooms
+    when roles.TRANSPORTER      then 1 * numSources
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER
       flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 2
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 2 or flagCount[flag_intents.PATROL] * 1
     when roles.SNIPER
       flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 2 or flagCount[flag_intents.PATROL] * 1
     when roles.MEDIC
-      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 3
 
 populationControl = ->
   # Count the actual populations by role
@@ -47,11 +47,16 @@ populationControl = ->
          candidates.push role
          u.memory.replaced = true
 
+  choice = undefined
   for role in priorities
     if role in candidates
-      for spawn in shuffle keys spawns
-        if generateUnit(spawn, role) == OK
-          break
+      choice = role
+      break
+
+  if choice?
+    for spawn in shuffle keys spawns
+      if generateUnit(spawn, choice) == OK
+        break
 
 failSafe =->
   parts = [ATTACK, RANGED_ATTACK]

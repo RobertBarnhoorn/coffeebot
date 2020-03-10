@@ -1,4 +1,4 @@
-{ countBy, filter, map, values } = require 'lodash'
+{ countBy, filter, map, merge, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy, goTo } = require 'paths'
@@ -6,6 +6,7 @@
   maintainTarget, buildTarget, collectTarget, transferTarget,
   flagTarget, claimTarget, resupplyTarget, refillTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
+{ units } = require 'units'
 
 upgrade = (unit) ->
   unit.memory.target or= upgradeTarget unit
@@ -24,10 +25,10 @@ harvest = (unit) ->
     unit.memory.target = undefined
     return false
   if unit.harvest(target) == ERR_NOT_IN_RANGE
-    container = target.pos.findInRange(FIND_STRUCTURES, 1,
+    containers = target.pos.findInRange(FIND_STRUCTURES, 1,
                                        filter: (s) -> s.structureType is STRUCTURE_CONTAINER)
-    if container.length
-      location = pos: container[0].pos, range: 0
+    if containers.length
+      location = pos: containers[0].pos, range: 0
       goTo location, unit
     else
       location = pos: target.pos, range: 1
@@ -36,7 +37,7 @@ harvest = (unit) ->
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target? or not target.room?
+  if not target?
     unit.memory.target = transferTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?
@@ -51,7 +52,7 @@ transfer = (unit) ->
 collect = (unit) ->
   unit.memory.target or= collectTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target? or not target.room?
+  if not target?
     unit.memory.target = collectTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?
@@ -65,26 +66,10 @@ collect = (unit) ->
     goTo location, unit
   return true
 
-resupply = (unit) ->
-  unit.memory.resupplyTarget or= resupplyTarget unit
-  target = Game.getObjectById(unit.memory.resupplyTarget)
-  if not target? or not target.room?
-    unit.memory.resupplyTarget = resupplyTarget unit
-    target = Game.getObjectById(unit.memory.resupplyTarget)
-    if not target?
-      unit.memory.resupplyTarget = undefined
-      return false
-  if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
-    unit.memory.resupplyTarget = undefined
-    unit.memory.working = true
-  else
-    location = pos: target.pos, range: 1
-    goTo location, unit
-
 build = (unit) ->
   unit.memory.buildTarget or= buildTarget unit
   target = Game.getObjectById(unit.memory.buildTarget)
-  if not target? or not target.room or not target.progress?
+  if not target? or not target.room? or not target.progress?
     unit.memory.buildTarget = buildTarget unit
     target = Game.getObjectById(unit.memory.buildTarget)
     if not target?
@@ -95,52 +80,80 @@ build = (unit) ->
     goTo location, unit
   return true
 
+resupply = (unit) ->
+  # If we have an existing target we should go there
+  # If the target no longer exists, find a new one
+  # If we've already finished resupplying, choose another target
+  unit.memory.resupplyTarget or= resupplyTarget unit
+  target = Game.getObjectById(unit.memory.resupplyTarget)
+  if not target?
+    unit.memory.resupplyTarget = resupplyTarget unit
+    target = Game.getObjectById(unit.memory.resupplyTarget)
+    # Couldn't find a target
+    if not target?
+      unit.memory.resupplyTarget = undefined
+      return false
+  # Move to target resources and use them to resupply
+  if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
+    # We've successfully resupplied, so get back to work
+    unit.memory.resupplyTarget = undefined
+    unit.memory.working = true
+  else
+    location = pos: target.pos, range: 1
+    goTo location, unit
+
 repair = (unit) ->
+  # If we have an existing target we should try to repair it
+  # If the target no longer exists, find a new one
+  # If we've already finished repairing it, choose another target
   unit.memory.repairTarget or= repairTarget unit
   target = Game.getObjectById(unit.memory.repairTarget)
-  if not target? or not target.room?
-    unit.memory.repairTarget = undefined
-    unit.memory.repairInitialHits = undefined
-    return false
-  unit.memory.repairInitialHits or= target.hits
-  if target.hits >= target.hitsMax or target.hits >= unit.memory.repairInitialHits + 50000
+  if not target? or not target.room? or target.hits >= target.hitsMax or target.hits >= unit.memory.repairInitialHits + 10000
     unit.memory.repairTarget = repairTarget unit
     target = Game.getObjectById(unit.memory.repairTarget)
-    if not target?
+    # Couldn't find a visible target
+    if not target? or not target.room?
       unit.memory.repairTarget = undefined
       unit.memory.repairInitialHits = undefined
       return false
     unit.memory.repairInitialHits = target.hits
+  unit.memory.repairInitialHits or= target.hits
+  # Move to and repair the target
   if unit.repair(target) == ERR_NOT_IN_RANGE
-    location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
+    # Don't get stuck in current room if target is on the edge of next room
+    range = if unit.room.name isnt target.room.name then 1 else 3
+    location = pos: target.pos, range: range
     goTo location, unit
   return true
 
 maintain = (unit) ->
+  # If we have an existing target we should try to maintain it
+  # If the target no longer exists, find a new one
+  # If we've already finished maintaining it, choose another target
   unit.memory.maintainTarget or= maintainTarget unit
   target = Game.getObjectById(unit.memory.maintainTarget)
-  if not target? or not target.room?
-    unit.memory.maintainTarget = undefined
-    unit.memory.maintainInitialHits = undefined
-    return false
-  unit.memory.maintainInitialHits or= target.hits
-  if target.hits == target.hitsMax or target.hits >= unit.memory.maintainInitialHits + 25000
+  if not target? or not target.room? or target.hits >= target.hitsMax or target.hits >= unit.memory.maintainInitialHits + 10000
     unit.memory.maintainTarget = maintainTarget unit
     target = Game.getObjectById(unit.memory.maintainTarget)
-    if not target?
+    # Couldn't find a visible target
+    if not target? or not target.room?
       unit.memory.maintainTarget = undefined
       unit.memory.maintainInitialHits = undefined
       return false
     unit.memory.maintainInitialHits = target.hits
+  unit.memory.maintainInitialHits or= target.hits
+  # Move to and maintain the target
   if unit.repair(target) == ERR_NOT_IN_RANGE
-    location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
+    # Don't get stuck in current room if target is on the edge of next room
+    range = if unit.room.name isnt target.room.name then 1 else 3
+    location = pos: target.pos, range: range
     goTo location, unit
   return true
 
 refillTower = (unit) ->
   unit.memory.refillTarget or= refillTarget unit
   target = Game.getObjectById(unit.memory.refillTarget)
-  if not target? or not target.room?
+  if not target? or target.store[RESOURCE_ENERGY] >= target.store.getCapacity(RESOURCE_ENERGY)
     unit.memory.refillTarget = refillTarget unit
     target = Game.getObjectById(unit.memory.refillTarget)
     if not target?
@@ -258,17 +271,21 @@ patrol = (unit) ->
     goTo location, unit
 
 attackUnit = (unit) ->
-  target = unit.pos.findClosestByPath FIND_HOSTILE_CREEPS
-  if target?
-    switch unit.memory.role
-      when roles.SNIPER
-        if unit.rangedAttack(target) == ERR_NOT_IN_RANGE
-          moveTo target, unit
-      else
-        if unit.attack(target) == ERR_NOT_IN_RANGE
-          moveTo target, unit
-    return true
-  return false
+  if unit.memory.unitTarget
+    target = Game.getObjectById(unit.memory.unitTarget)
+  if not target?
+    target = (unit.pos.findClosestByPath FIND_HOSTILE_CREEPS)
+    if target?
+      unit.memory.unitTarget = target.id
+  return false if not target?
+  switch unit.memory.role
+    when roles.SNIPER
+      if unit.rangedAttack(target) == ERR_NOT_IN_RANGE
+        moveTo target, unit
+    else
+      if unit.attack(target) == ERR_NOT_IN_RANGE
+        moveTo target, unit
+  return true
 
 attackStructure = (unit) ->
   target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES,

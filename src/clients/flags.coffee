@@ -10,5 +10,6 @@ flag_intents =
   DEFEND:  COLOR_GREEN
   RESERVE: COLOR_BLUE
   CLAIM:   COLOR_PURPLE
+  GARRISON: COLOR_CYAN
 
 module.exports = { flags, flag_intents }

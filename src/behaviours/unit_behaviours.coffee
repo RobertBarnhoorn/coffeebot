@@ -39,16 +39,9 @@ claimer = (unit) ->
   claim unit
 
 militant = (unit) ->
-  if unit.memory.patrolling
-    patrol unit
-  else if unit.memory.defending
-    defend unit
-  else if unit.memory.attacking
-    attack unit
-  else if unit.memory.invading
-    invade unit
-  else
-    # In order of priority, try find an activity to do
+  # In order of priority, try find an activity to do and remember it for a while
+  if unit.memory.actionttl <= 0
+    unit.memory.actionttl = 25
     defending = filter(flags, (f) => f.color is flag_intents.DEFEND).length > 0
     unit.memory.defending = defending
     return if defending
@@ -60,5 +53,16 @@ militant = (unit) ->
     return if attacking
     patrolling = filter(flags, (f) => f.color is flag_intents.PATROL).length > 0
     unit.memory.patrolling = patrolling
+
+  if unit.memory.defending
+    defend unit
+  else if unit.memory.attacking
+    attack unit
+  else if unit.memory.invading
+    invade unit
+  else if unit.memory.patrolling
+    patrol unit
+
+  unit.memory.actionttl -= 1
 
 module.exports = { harvester, upgrader, engineer, transporter, reserver, claimer, militant }

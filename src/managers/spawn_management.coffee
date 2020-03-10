@@ -25,11 +25,11 @@ desired = (role) ->
     when roles.CLAIMER
       flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 2 or flagCount[flag_intents.PATROL] * 1
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 2
     when roles.SNIPER
-      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 2 or flagCount[flag_intents.PATROL] * 1
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 2 or flagCount[flag_intents.PATROL] * 1
     when roles.MEDIC
-      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 3
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 4
 
 populationControl = ->
   # Count the actual populations by role

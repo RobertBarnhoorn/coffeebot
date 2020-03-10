@@ -42,26 +42,21 @@ militant = (unit) ->
   # In order of priority, try find an activity to do and remember it for a while
   if unit.memory.actionttl <= 0
     unit.memory.actionttl = 25
-    defending = filter(flags, (f) => f.color is flag_intents.DEFEND).length > 0
-    unit.memory.defending = defending
-    return if defending
-    attacking = filter(flags, (f) => f.color is flag_intents.ATTACK).length > 0
-    unit.memory.attacking = attacking
-    return if attacking
-    invading = filter(flags, (f) => f.color is flag_intents.INVADE).length > 0
-    unit.memory.invading = invading
-    return if attacking
-    patrolling = filter(flags, (f) => f.color is flag_intents.PATROL).length > 0
-    unit.memory.patrolling = patrolling
+    unit.memory.target = undefined
+    if filter(flags, (f) => f.color is flag_intents.DEFEND).length > 0
+      unit.memory.action = 'defending'
+    else if filter(flags, (f) => f.color is flag_intents.ATTACK).length > 0
+      unit.memory.action = 'attacking'
+    else if filter(flags, (f) => f.color is flag_intents.INVADE).length > 0
+      unit.memory.action = 'invading'
+    else if filter(flags, (f) => f.color is flag_intents.PATROL).length > 0
+      unit.memory.action = 'patrolling'
 
-  if unit.memory.defending
-    defend unit
-  else if unit.memory.attacking
-    attack unit
-  else if unit.memory.invading
-    invade unit
-  else if unit.memory.patrolling
-    patrol unit
+  switch unit.memory.action
+    when 'defending' then defend unit
+    when 'attacking' then attack unit
+    when 'invading' then invade unit
+    when 'patrolling' then patrol unit
 
   unit.memory.actionttl -= 1
 

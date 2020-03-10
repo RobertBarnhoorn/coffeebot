@@ -24,21 +24,24 @@ harvest = (unit) ->
   if not target?
     unit.memory.target = undefined
     return
-  if unit.memory.inPosition
-    unit.harvest(target)
-  else
-    containers = target.pos.findInRange(FIND_STRUCTURES, 1,
-                                       filter: (s) -> s.structureType is STRUCTURE_CONTAINER)
 
+  if unit.memory.inPosition
+    unit.harvest target
+  else
+    containers = filter target.pos.findInRange(FIND_STRUCTURES, 1),
+                        (s) -> s.structureType is STRUCTURE_CONTAINER
+
+    # If there is a container by the source, sit on top of it, else sit next to the source
     if containers.length
       location = pos: containers[0].pos, range: 0
     else
       location = pos: target.pos, range: 1
 
+    # Once we reach the target location we only have to harvest
     if unit.pos.inRangeTo(location.pos, location.range)
       unit.memory.inPosition = true
     else
-    goTo location, unit
+      goTo location, unit
 
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
@@ -91,8 +94,10 @@ resupply = (unit) ->
   # If the target no longer exists, find a new one
   # If we've already finished resupplying, choose another target
   unit.memory.resupplyTarget or= resupplyTarget unit
+  unitCapacity = unit.store.getCapacity(RESOURCE_ENERGY)
   target = Game.getObjectById(unit.memory.resupplyTarget)
-  if not target?
+  if not target? or (target.store? and target.store[RESOURCE_ENERGY] < unitCapacity) or \
+                    (target.amount? and target.amount < unitCapacity)
     unit.memory.resupplyTarget = resupplyTarget unit
     target = Game.getObjectById(unit.memory.resupplyTarget)
     # Couldn't find a target
@@ -277,20 +282,29 @@ patrol = (unit) ->
     goTo location, unit
 
 attackUnit = (unit) ->
-  if unit.memory.unitTarget
-    target = Game.getObjectById(unit.memory.unitTarget)
+  if unit.memory.unitTarget?
+    target = Game.getObjectById unit.memory.unitTarget
   if not target?
-    target = (unit.pos.findClosestByPath FIND_HOSTILE_CREEPS)
-    if target?
-      unit.memory.unitTarget = target.id
+    target = unit.pos.findClosestByRange FIND_HOSTILE_CREEPS
   return false if not target?
+  unit.memory.unitTarget = target.id
   switch unit.memory.role
     when roles.SNIPER
-      if unit.rangedAttack(target) == ERR_NOT_IN_RANGE
-        moveTo target, unit
+      # Kite enemies by only staying as close as we have to to shoot them
+      if unit.pos.getRangeTo(target.pos) < 3
+        deltaX = unit.pos.x - target.pos.x
+        deltaY = unit.pos.y - target.pos.y
+        xPos = Math.max(Math.min(deltaX, 50), 0)
+        yPos = Math.max(Math.min(deltaY, 50), 0)
+        location = pos: new RoomPosition(unit.pos.x + deltaX, unit.pos.y + deltaY, unit.room.name), range: 0
+      else
+        location = pos: target.pos, range: 3
+      goTo location, unit
+      unit.rangedAttack(target)
     else
       if unit.attack(target) == ERR_NOT_IN_RANGE
-        moveTo target, unit
+        location = pos: target.pos, range: 1
+        goTo location, unit
   return true
 
 attackStructure = (unit) ->

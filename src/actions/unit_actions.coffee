@@ -1,4 +1,4 @@
-{ countBy, filter, map, merge, values } = require 'lodash'
+{ countBy, filter, merge, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy, goTo } = require 'paths'

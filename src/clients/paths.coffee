@@ -1,4 +1,4 @@
-{ forEach } = require 'lodash'
+{ find, forEach, last, map } = require 'lodash'
 { rooms } = require 'rooms'
 { cpuUsed } = require 'cpu'
 
@@ -46,11 +46,25 @@ moveBy = (path, unit) ->
   if unit.moveByPath(path) is OK
     path.shift()
 
+# Find the closest of a list of targets by path
+getClosest = (entity, targets) ->
+  locations = map targets, ((t) -> pos: t.pos, range: 1)
+  path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 20000
+  if path.path.length
+    # Our destination is the last position of the path
+    destination = last(path.path)
+  else
+    # We are already at the destination
+    destination = entity.pos
+  return find targets, ((t) -> t.pos.inRangeTo(destination, 1))
+
+# Find the optimal path from pos to loc, potentially across multiple rooms
+# If loc is an array of locations find the path to closest loc
 getPath = (pos, loc, includeNonStatic=false) ->
   if includeNonStatic
-    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrixIncludeNonStatic, maxOps: 10000
+    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrixIncludeNonStatic, maxOps: 20000
   else
-    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 10000
+    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 20000
 
 serializePath = (path) ->
   serializeRoomPos = (pos) -> pos.x + ',' + pos.y + ',' + pos.roomName
@@ -129,4 +143,4 @@ generateCostMatrix = (roomName, includeNonStatic=false) ->
 
   return costs
 
-module.exports = { moveTo, moveBy, goTo, getPath }
+module.exports = { moveTo, moveBy, goTo, getPath, getClosest }

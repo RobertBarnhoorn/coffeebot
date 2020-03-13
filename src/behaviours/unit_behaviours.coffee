@@ -16,7 +16,7 @@ transporter = (unit) ->
   if unit.memory.working
     transfer unit
   else
-    collect(unit)
+    collect unit
 
 upgrader = (unit) ->
   unit.memory.working = shouldWork unit

@@ -1,10 +1,11 @@
-{ countBy, filter, merge, values } = require 'lodash'
+{ countBy, filter, merge, sample, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy, goTo } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
   maintainTarget, buildTarget, collectTarget, transferTarget,
-  flagTarget, claimTarget, resupplyTarget, refillTarget } = require 'unit_targeting'
+  flagTarget, claimTarget, resupplyTarget, refillTarget,
+  healTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
 { units } = require 'units'
 
@@ -178,6 +179,10 @@ refillTower = (unit) ->
 reserve = (unit) ->
   unit.memory.target or= reserveTarget unit
   target = flags[unit.memory.target]
+  if not target?
+    unit.memory.target = reserveTarget unit
+    target = flags[unit.memory.target]
+  return if not target?
   room = rooms[target.pos.roomName]
   if not room?
     location = pos: target.pos, range: 1
@@ -219,7 +224,10 @@ invade = (unit) ->
 
   target = flags[unit.memory.target]
   if not target?
-    unit.memory.target = flagTarget unit, flag_intents.INVADE
+    if unit.memory.shouldInvade
+      unit.memory.target = flagTarget unit, flag_intents.INVADE
+    else
+      unit.memory.target = flagTarget unit, flag_intents.GARRISON
     target = flags[unit.memory.target]
   return if not target?
 
@@ -282,6 +290,8 @@ patrol = (unit) ->
     goTo location, unit
 
 attackUnit = (unit) ->
+  if not unit.room.controller?.my and unit.room.controller?.safeMode?
+    return false
   if unit.memory.unitTarget?
     target = Game.getObjectById unit.memory.unitTarget
   if not target?
@@ -290,13 +300,13 @@ attackUnit = (unit) ->
   unit.memory.unitTarget = target.id
   switch unit.memory.role
     when roles.SNIPER
-      # Kite enemies by only staying as close as we have to to shoot them
+      # Kite enemies by staying *just* within range, and moving away if they get closer
       if unit.pos.getRangeTo(target.pos) < 3
         deltaX = unit.pos.x - target.pos.x
         deltaY = unit.pos.y - target.pos.y
-        xPos = Math.max(Math.min(deltaX, 50), 0)
-        yPos = Math.max(Math.min(deltaY, 50), 0)
-        location = pos: new RoomPosition(unit.pos.x + deltaX, unit.pos.y + deltaY, unit.room.name), range: 0
+        xPos = Math.max(Math.min(unit.pos.x + deltaX, 49), 1)
+        yPos = Math.max(Math.min(unit.pos.y + deltaY, 49), 1)
+        location = pos: new RoomPosition(xPos, yPos, unit.room.name), range: 0
       else
         location = pos: target.pos, range: 3
       goTo location, unit
@@ -308,6 +318,9 @@ attackUnit = (unit) ->
   return true
 
 attackStructure = (unit) ->
+  # Don't try attack if we're in an enemy room which has safemode active
+  if not unit.room.controller?.my and unit.room.controller?.safeMode?
+    return false
   target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES,
                                       filter: (s) => s.structureType isnt STRUCTURE_CONTROLLER
   if target?
@@ -317,15 +330,20 @@ attackStructure = (unit) ->
   return false
 
 heal = (unit) ->
-  injured = unit.room.find FIND_MY_CREEPS,
-                           filter: (u) => u.hits < u.hitsMax
-  if injured.length
-    target = injured.sort((a, b) => a.hits - b.hits)[0]
-    if unit.heal(target) == ERR_NOT_IN_RANGE
-      unit.rangedHeal(target)
-      moveTo target, unit
-    return true
-  return false
+  if not unit.room.controller?.my and unit.room.controller?.safeMode?
+    return false
+  unit.memory.target or= healTarget unit
+  target = Game.getObjectById unit.memory.target
+  if not target? or target.hits == target.hitsMax
+    unit.memory.target = healTarget unit
+    target = Game.getObjectById unit.memory.target
+  if not target?
+    unit.memory.target = false
+    return false
+  if unit.heal(target) == ERR_NOT_IN_RANGE
+    unit.rangedHeal target
+    moveTo target, unit
+  return true
 
 shouldWork = (unit) ->
   if unit.store.getFreeCapacity() is 0

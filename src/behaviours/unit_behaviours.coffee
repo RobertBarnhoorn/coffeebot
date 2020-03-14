@@ -6,7 +6,8 @@
 { upgrade, harvest, transfer, build,
   repair, maintain, refillTower, shouldWork,
   moveTo, resupply, collect, reserve,
-  claim, invade, defend, patrol } = require 'unit_actions'
+  claim, invade, defend, patrol,
+  attack }= require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit

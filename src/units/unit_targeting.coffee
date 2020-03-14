@@ -5,6 +5,7 @@
 { getPath, getClosest } = require 'paths'
 { units } = require 'units'
 { flags, flag_intents } = require 'flags'
+{ MYSELF } = require 'constants'
 
 transferTarget = (unit) ->
   structures = []
@@ -58,13 +59,9 @@ harvestTarget = (unit) ->
     sourcesFound = filter room.find(FIND_SOURCES),
                      (s) -> not any(u.memory.target is s.id for u in values units)
     sources.push(sourcesFound...) if sourcesFound?
+
   if sources.length
     return getClosest(unit, sources).id
-
-  expiringHarvester = minBy filter(units,
-                                  (u) => u.memory.role is roles.HARVESTER),
-                            'ticksToLive'
-  return expiringHarvester.memory.target if expiringHarvester?
   return undefined
 
 flagTarget = (unit, flag_intent) ->
@@ -75,16 +72,11 @@ flagTarget = (unit, flag_intent) ->
   return undefined
 
 reserveTarget = (unit) ->
-  targets = map(filter(flags, (f) -> f.color is flag_intents.RESERVE and not any (u.memory.target is f.name for u in values units)),
+  targets = map(filter(flags, ((f) -> f.color is flag_intents.RESERVE and not any (u.memory.target is f.name for u in values units))),
                (f) => f.name)
 
   if targets.length
     return sample targets
-  else
-    expiringReserver = minBy filter(units,
-                                   (u) => u.memory.role is roles.RESERVER),
-                             'ticksToLive'
-    return expiringReserver.memory.target if expiringReserver?
   return undefined
 
 claimTarget = (unit) ->
@@ -96,7 +88,10 @@ claimTarget = (unit) ->
 
 repairTarget = (unit) ->
   structures = []
-  for room in values rooms
+  for room in values rooms when not room.controller?.owner? or
+                                room.controller?.owner?.username is MYSELF or
+                                not room.controller?.reservation? or
+                                room.controller?.reservation?.username is MYSELF
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                                (if s.my? then s.my else (s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER])) and \
@@ -111,7 +106,10 @@ repairTarget = (unit) ->
 
 maintainTarget = (unit) ->
   structures = []
-  for room in values rooms
+  for room in values rooms when not room.controller?.owner? or
+                                room.controller?.owner?.username is MYSELF or
+                                not room.controller?.reservation? or
+                                room.controller?.reservation?.username is MYSELF
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.hits < s.hitsMax and \
                                                not any(u.memory.maintainTarget is s.id for u in values units)
@@ -126,7 +124,10 @@ maintainTarget = (unit) ->
 
 buildTarget = (unit) ->
   sites = []
-  for room in values rooms
+  for room in values rooms when not room.controller?.owner? or
+                                room.controller?.owner?.username is MYSELF or
+                                not room.controller?.reservation? or
+                                room.controller?.reservation?.username is MYSELF
     sitesFound = room.find FIND_MY_CONSTRUCTION_SITES,
                            filter: (s) => not any(u.memory.buildTarget is s.id for u in values units)
     sites.push(sitesFound...) if sitesFound?
@@ -166,8 +167,14 @@ refillTarget = (unit) ->
     return getClosest(unit, towers).id
   return undefined
 
-
+healTarget = (unit) ->
+  units = unit.room.find FIND_MY_CREEPS
+  injured = filter units, ((u) -> u.hits < u.hitsMax)
+  if injured.length
+    return injured.sort((a, b) => a.hits - b.hits)[0].id
+  return undefined
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    maintainTarget, buildTarget, collectTarget, transferTarget,
-                   flagTarget, claimTarget, resupplyTarget, refillTarget }
+                   flagTarget, claimTarget, resupplyTarget, refillTarget,
+                   healTarget }

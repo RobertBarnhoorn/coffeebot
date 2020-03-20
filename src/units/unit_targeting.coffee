@@ -1,4 +1,4 @@
-{ any, filter, map, sample, shuffle, values } = require 'lodash'
+{ any, filter, keys, map, sample, shuffle, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -11,10 +11,12 @@ transferTarget = (unit) ->
   structures = []
   storage = []
   for room in values rooms
-    structuresFound = room.find FIND_MY_STRUCTURES,
-                                filter: (s) => s.energy < s.energyCapacity and \
-                                                          s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
-    structures.push(structuresFound...) if structuresFound?
+    if unit.store[RESOURCE_ENERGY] > 0
+      structuresFound = room.find FIND_MY_STRUCTURES,
+                                  filter: (s) => s.energy < s.energyCapacity and
+                                                            s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
+                                                            not any (s.id is u.memory.target for u in values units)
+      structures.push(structuresFound...) if structuresFound?
     storage.push(room.storage) if room.storage?
 
   if structures.length
@@ -27,25 +29,27 @@ collectTarget = (unit) ->
   resources = []
   for room in values rooms
     resourcesFound = room.find FIND_DROPPED_RESOURCES,
-                               filter: (r) => r.resourceType is RESOURCE_ENERGY and
-                                              r.amount > 0
+                               filter: (r) -> r.amount >= unit.store.getCapacity()
     containersFound = room.find FIND_STRUCTURES,
-                                filter: (s) => s.structureType is STRUCTURE_CONTAINER and
-                                               s.store[RESOURCE_ENERGY] > 0
+                                filter: (s) -> s.structureType is STRUCTURE_CONTAINER and
+                                               s.store.getUsedCapacity >= unit.store.getCapacity()
     tombsFound = room.find FIND_TOMBSTONES,
-                           filter: (t) => t.store[RESOURCE_ENERGY] > 0
+                           filter: (t) -> t.store.getUsedCapacity() >= unit.store.getCapacity()
     ruinsFound = room.find FIND_RUINS,
-                           filter: (r) => r.store[RESOURCE_ENERGY] > 0
+                           filter: (r) -> r.store.getUsedCapacity() >= unit.store.getCapacity()
     resources.push(resourcesFound...) if resourcesFound?
     resources.push(containersFound...) if containersFound?
     resources.push(tombsFound...) if tombsFound?
     resources.push(ruinsFound...) if ruinsFound?
 
-  prioritized = resources.sort((a, b) => (if b.amount? then b.amount else b.store[RESOURCE_ENERGY]) - \
-                                         (if a.amount? then a.amount else a.store[RESOURCE_ENERGY])) \
-                         .slice(0, Math.ceil(Math.sqrt(resources.length)))
-  if prioritized.length
-    return getClosest(unit, prioritized).id
+
+  uniques = filter resources, (r) -> not any (r.id is u.memory.target for u in values units)
+  if uniques.length
+    closest = getClosest(unit, uniques)
+    return closest.id if closest?
+  else if resources.length
+    closest = getClosest(unit, resources)
+    return closest.id if closest?
   return undefined
 
 upgradeTarget = (unit) ->
@@ -57,11 +61,12 @@ harvestTarget = (unit) ->
   sources = []
   for room in values rooms
     sourcesFound = filter room.find(FIND_SOURCES),
-                     (s) -> not any(u.memory.target is s.id for u in values units)
+                          (s) -> not any (s.id == u.memory.target for u in values units)
     sources.push(sourcesFound...) if sourcesFound?
 
   if sources.length
-    return getClosest(unit, sources).id
+    closest = getClosest(unit, sources)
+    return closest.id if closest?
   return undefined
 
 flagTarget = (unit, flag_intent) ->
@@ -72,7 +77,8 @@ flagTarget = (unit, flag_intent) ->
   return undefined
 
 reserveTarget = (unit) ->
-  targets = map(filter(flags, ((f) -> f.color is flag_intents.RESERVE and not any (u.memory.target is f.name for u in values units))),
+  targets = map(filter(flags, ((f) -> f.color is flag_intents.RESERVE and
+                                      not any (f.name is u.memory.target for u in values units))),
                (f) => f.name)
 
   if targets.length
@@ -80,7 +86,8 @@ reserveTarget = (unit) ->
   return undefined
 
 claimTarget = (unit) ->
-  targets = map(filter(flags, (f) -> f.color is flag_intents.CLAIM and not any (u.memory.target is f.name for u in values units)),
+  targets = map(filter(flags, (f) -> f.color is flag_intents.CLAIM and
+                                     not any (f.name is f.name for u in values units)),
                (f) => f.name)
   if targets.length
     return sample targets
@@ -88,10 +95,8 @@ claimTarget = (unit) ->
 
 repairTarget = (unit) ->
   structures = []
-  for room in values rooms when not room.controller?.owner? or
-                                room.controller?.owner?.username is MYSELF or
-                                not room.controller?.reservation? or
-                                room.controller?.reservation?.username is MYSELF
+  myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
+  for room in myRooms
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.structureType isnt STRUCTURE_WALL and \
                                                (if s.my? then s.my else (s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER])) and \
@@ -106,16 +111,14 @@ repairTarget = (unit) ->
 
 maintainTarget = (unit) ->
   structures = []
-  for room in values rooms when not room.controller?.owner? or
-                                room.controller?.owner?.username is MYSELF or
-                                not room.controller?.reservation? or
-                                room.controller?.reservation?.username is MYSELF
+  myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
+  for room in myRooms
     structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) => s.hits < s.hitsMax and \
-                                               not any(u.memory.maintainTarget is s.id for u in values units)
+                                filter: (s) => s.hits < s.hitsMax and
+                                               not any (s.id is u.memory.maintainTarget for u in values units)
     structures.push(structuresFound...) if structuresFound?
 
-  prioritized = structures.sort((a, b) => a.hits - b.hits) \
+  prioritized = structures.sort((a, b) => (a.hitsMax - a.hits) - (b.hitsMax - b.hits)) \
                           .slice(0, Math.ceil(Math.sqrt(structures.length)))
 
   if prioritized.length
@@ -124,12 +127,10 @@ maintainTarget = (unit) ->
 
 buildTarget = (unit) ->
   sites = []
-  for room in values rooms when not room.controller?.owner? or
-                                room.controller?.owner?.username is MYSELF or
-                                not room.controller?.reservation? or
-                                room.controller?.reservation?.username is MYSELF
+  myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
+  for room in myRooms
     sitesFound = room.find FIND_MY_CONSTRUCTION_SITES,
-                           filter: (s) => not any(u.memory.buildTarget is s.id for u in values units)
+                           filter: (s) => not any(s.id is u.memory.buildTarget for u in values units)
     sites.push(sitesFound...) if sitesFound?
   if sites.length
     return getClosest(unit, sites).id
@@ -168,8 +169,8 @@ refillTarget = (unit) ->
   return undefined
 
 healTarget = (unit) ->
-  units = unit.room.find FIND_MY_CREEPS
-  injured = filter units, ((u) -> u.hits < u.hitsMax)
+  targets = unit.room.find FIND_MY_CREEPS
+  injured = filter targets, ((u) -> u.hits < u.hitsMax)
   if injured.length
     return injured.sort((a, b) => a.hits - b.hits)[0].id
   return undefined

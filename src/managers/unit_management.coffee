@@ -5,19 +5,15 @@
 
 unitManagement = ->
   for u in shuffle values units
-    try
-      switch u.memory.role
-          when roles.UPGRADER then upgrader u
-          when roles.HARVESTER then harvester u
-          when roles.ENGINEER then engineer u
-          when roles.TRANSPORTER then transporter u
-          when roles.RESERVER then reserver u
-          when roles.CLAIMER then claimer u
-          when roles.SOLDIER then militant u
-          when roles.SNIPER then militant u
-          when roles.MEDIC then militant u
-    catch err
-      console.log 'ERROR in unit: ' + u.name
-      console.log err
+    switch u.memory.role
+        when roles.UPGRADER then upgrader u
+        when roles.HARVESTER then harvester u
+        when roles.ENGINEER then engineer u
+        when roles.TRANSPORTER then transporter u
+        when roles.RESERVER then reserver u
+        when roles.CLAIMER then claimer u
+        when roles.SOLDIER then militant u
+        when roles.SNIPER then militant u
+        when roles.MEDIC then militant u
 
 module.exports = { unitManagement }

@@ -1,4 +1,4 @@
-{ countBy, filter, merge, sample, values } = require 'lodash'
+{ countBy, filter, keys, merge, sample, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy, goTo } = require 'paths'
@@ -53,27 +53,44 @@ transfer = (unit) ->
     if not target?
       unit.memory.target = undefined
       return false
-  if unit.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
+
+  if unit.pos.inRangeTo(target, 1)
+    resourceTypes = (k for k in keys unit.store)
+    for type in resourceTypes
+      if unit.transfer(target, type) is OK
+        unit.memory.target = undefined
+        break
+  else
     location = pos: target.pos, range: 1
     goTo location, unit
-  else
-    unit.memory.target = undefined
 
 collect = (unit) ->
   unit.memory.target or= collectTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target?
+  if not target? or
+        (target.amount? and target.amount < unit.store.getCapacity()) or
+        (target.store? and target.store.getUsedCapacity() < unit.store.getCapacity())
     unit.memory.target = collectTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?
       unit.memory.target = undefined
       return false
-  if unit.pickup(target) is OK or unit.withdraw(target,RESOURCE_ENERGY) is OK
-    unit.memory.working = true
-    unit.memory.target = undefined
+
+  if unit.pos.inRangeTo(target, 1)
+    if unit.pickup(target) is OK
+      unit.memory.working = true
+      unit.memory.target = undefined
+    else
+      resourceTypes = (k for k in keys unit.store)
+      for type in resourceTypes
+        if unit.withdraw(target, type) is OK
+          unit.memory.working = true
+          unit.memory.target = undefined
+          break
   else
     location = pos: target.pos, range: 1
     goTo location, unit
+
   return true
 
 build = (unit) ->
@@ -231,7 +248,7 @@ invade = (unit) ->
     target = flags[unit.memory.target]
   return if not target?
 
-  location = pos: target.pos, range: 1
+  location = pos: target.pos, range: 3
   goTo location, unit
 
 attack = (unit) ->
@@ -248,7 +265,7 @@ attack = (unit) ->
     target = flags[unit.memory.target]
   return if not target?
 
-  location = pos: target.pos, range: 2
+  location = pos: target.pos, range: 3
   goTo location, unit
 
 defend = (unit) ->
@@ -265,7 +282,7 @@ defend = (unit) ->
     target = flags[unit.memory.target]
   return if not target?
 
-  location = pos: target.pos, range: 1
+  location = pos: target.pos, range: 3
   goTo location, unit
 
 patrol = (unit) ->
@@ -330,7 +347,7 @@ attackStructure = (unit) ->
   return false
 
 heal = (unit) ->
-  if not unit.room.controller?.my and unit.room.controller?.safeMode?
+  if not unit.room.controller?.my and unit.room.controller?.safeMode
     return false
   unit.memory.target or= healTarget unit
   target = Game.getObjectById unit.memory.target
@@ -338,7 +355,11 @@ heal = (unit) ->
     unit.memory.target = healTarget unit
     target = Game.getObjectById unit.memory.target
   if not target?
-    unit.memory.target = false
+    unit.memory.target = undefined
+    target = unit.pos.findClosestByRange FIND_MY_CREEPS,
+                                         filter: (c) -> c.name isnt unit.name
+    if unit.heal(target) == ERR_NOT_IN_RANGE
+      unit.rangedHeal target
     return false
   if unit.heal(target) == ERR_NOT_IN_RANGE
     unit.rangedHeal target

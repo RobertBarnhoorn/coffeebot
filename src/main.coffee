@@ -13,4 +13,3 @@ module.exports.loop = ->
   do flagManagement
   do populationControl
   do unitManagement
-  console.log cpuUsed()

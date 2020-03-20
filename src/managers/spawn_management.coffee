@@ -20,17 +20,17 @@ desired = (role) ->
     when roles.HARVESTER        then 1 * numSources
     when roles.UPGRADER         then 1 * numRooms
     when roles.ENGINEER         then 1 * numRooms
-    when roles.TRANSPORTER      then 1 * numRooms
+    when roles.TRANSPORTER      then 1 * numSources
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER
       flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
     when roles.SNIPER
-      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 1 or flagCount[flag_intents.INVADE] * 4 or flagCount[flag_intents.PATROL] * 1
+      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 4 or Math.floor(flagCount[flag_intents.PATROL] * 0.5)
     when roles.MEDIC
-      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 8 or flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
 
 populationControl = ->
   # Count the actual populations by role
@@ -44,7 +44,7 @@ populationControl = ->
       candidates.push role
     else
       for u in values units
-        if u.memory.role == role and u.ticksToLive < 200 and not u.memory.replaced?
+        if u.memory.role == role and u.ticksToLive < 25 and not u.memory.replaced?
          candidates.push role
          u.memory.replaced = true
 

@@ -18,7 +18,7 @@ placeDefensiveFlags = ->
 deleteOldFlags = ->
   for f in values flags
     # Remove defensive flag if enemies are no longer present
-    if f.color is flag_intents.DEFEND and not f.room.find(FIND_HOSTILE_CREEPS).length
+    if f.color is flag_intents.DEFEND and f.room? and not f.room.find(FIND_HOSTILE_CREEPS).length
       f.remove()
 
 module.exports = { flagManagement }

@@ -59,6 +59,8 @@ transfer = (unit) ->
     for type in resourceTypes
       if unit.transfer(target, type) is OK
         unit.memory.target = undefined
+        if unit.store.getUsedCapacity() == 0
+          unit.memory.working = false
         break
   else
     location = pos: target.pos, range: 1
@@ -273,7 +275,7 @@ defend = (unit) ->
     when roles.MEDIC
       return if heal unit
     else
-      return if attackUnit unit
+      return if attackUnit(unit) or attackStructure(unit)
 
   unit.memory.target or= flagTarget unit, flag_intents.DEFEND
   target = flags[unit.memory.target]
@@ -290,7 +292,7 @@ patrol = (unit) ->
     when roles.MEDIC
       return if heal unit
     else
-      return if attackUnit unit
+      return if attackUnit(unit) or attackStructure(unit)
 
   unit.memory.target or= flagTarget unit, flag_intents.PATROL
   target = flags[unit.memory.target]

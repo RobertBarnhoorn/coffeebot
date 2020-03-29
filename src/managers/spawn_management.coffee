@@ -28,7 +28,7 @@ desired = (role) ->
     when roles.SOLDIER
       flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
     when roles.SNIPER
-      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 4 or Math.floor(flagCount[flag_intents.PATROL] * 0.5)
+      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 4 or (if flagCount[flag_intents.PATROL] then 1 else 0)
     when roles.MEDIC
       flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
 

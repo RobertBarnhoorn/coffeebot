@@ -47,7 +47,7 @@ harvest = (unit) ->
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target?
+  if not target? or target.store.getFreeCapacity() == 0
     unit.memory.target = transferTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?
@@ -59,8 +59,6 @@ transfer = (unit) ->
     for type in resourceTypes
       if unit.transfer(target, type) is OK
         unit.memory.target = undefined
-        if unit.store.getUsedCapacity() == 0
-          unit.memory.working = false
         break
   else
     location = pos: target.pos, range: 1
@@ -80,13 +78,11 @@ collect = (unit) ->
 
   if unit.pos.inRangeTo(target, 1)
     if unit.pickup(target) is OK
-      unit.memory.working = true
       unit.memory.target = undefined
     else
       resourceTypes = (k for k in keys unit.store)
       for type in resourceTypes
         if unit.withdraw(target, type) is OK
-          unit.memory.working = true
           unit.memory.target = undefined
           break
   else
@@ -128,7 +124,6 @@ resupply = (unit) ->
   if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
     # We've successfully resupplied, so get back to work
     unit.memory.resupplyTarget = undefined
-    unit.memory.working = true
   else
     location = pos: target.pos, range: 1
     goTo location, unit

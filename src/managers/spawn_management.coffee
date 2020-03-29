@@ -20,17 +20,17 @@ desired = (role) ->
     when roles.HARVESTER        then 1 * numSources
     when roles.UPGRADER         then 1 * numRooms
     when roles.ENGINEER         then 1 * numRooms
-    when roles.TRANSPORTER      then 1 * numSources
+    when roles.TRANSPORTER      then 2 * numSources
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER
       flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.INVADE] * 4
     when roles.SNIPER
-      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 4 or (if flagCount[flag_intents.PATROL] then 1 else 0)
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 2 or flagCount[flag_intents.INVADE] * 2 or (if flagCount[flag_intents.PATROL] then 1 else 0)
     when roles.MEDIC
-      flagCount[flag_intents.DEFEND] * 4 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.DEFEND] * 0 or flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.INVADE] * 4
 
 populationControl = ->
   # Count the actual populations by role

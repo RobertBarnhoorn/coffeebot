@@ -13,7 +13,7 @@ transferTarget = (unit) ->
   for room in values rooms
     if unit.store[RESOURCE_ENERGY] > 0
       structuresFound = room.find FIND_MY_STRUCTURES,
-                                  filter: (s) => s.energy < s.energyCapacity and
+                                  filter: (s) -> s.energy < s.energyCapacity and
                                                             s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
                                                             not any (s.id is u.memory.target for u in values units)
       structures.push(structuresFound...) if structuresFound?
@@ -29,14 +29,18 @@ collectTarget = (unit) ->
   resources = []
   for room in values rooms
     resourcesFound = room.find FIND_DROPPED_RESOURCES,
-                               filter: (r) -> r.amount >= unit.store.getCapacity()
+                               filter: (r) -> r.amount >= unit.store.getCapacity() and
+                               not any (r.id is u.memory.target for u in values units)
     containersFound = room.find FIND_STRUCTURES,
                                 filter: (s) -> s.structureType is STRUCTURE_CONTAINER and
-                                               s.store.getUsedCapacity >= unit.store.getCapacity()
+                                               s.store.getUsedCapacity >= unit.store.getCapacity() and
+                                               not any (s.id is u.memory.target for u in values units)
     tombsFound = room.find FIND_TOMBSTONES,
-                           filter: (t) -> t.store.getUsedCapacity() >= unit.store.getCapacity()
+                           filter: (t) -> t.store.getUsedCapacity() >= unit.store.getCapacity() and
+                                          not any (t.id is u.memory.target for u in values units)
     ruinsFound = room.find FIND_RUINS,
-                           filter: (r) -> r.store.getUsedCapacity() >= unit.store.getCapacity()
+                           filter: (r) -> r.store.getUsedCapacity() >= unit.store.getCapacity() and
+                                          not any (r.id is u.memory.target for u in values units)
     resources.push(resourcesFound...) if resourcesFound?
     resources.push(containersFound...) if containersFound?
     resources.push(tombsFound...) if tombsFound?
@@ -46,11 +50,9 @@ collectTarget = (unit) ->
   uniques = filter resources, (r) -> not any (r.id is u.memory.target for u in values units)
   if uniques.length
     closest = getClosest(unit, uniques)
-    return closest.id if closest?
   else if resources.length
     closest = getClosest(unit, resources)
-    return closest.id if closest?
-  return undefined
+  return if closest? then closest.id else undefined
 
 upgradeTarget = (unit) ->
   candidates = (room for room in values rooms \

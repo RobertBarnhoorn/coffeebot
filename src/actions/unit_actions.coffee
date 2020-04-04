@@ -208,6 +208,10 @@ reserve = (unit) ->
 claim = (unit) ->
   unit.memory.target or= claimTarget unit
   target = flags[unit.memory.target]
+  if not target?
+    unit.memory.target = claimTarget unit
+    target = flags[unit.memory.target]
+  return if not target?
   room = rooms[target.pos.roomName]
   if not room?
     location = pos: target.pos, range: 1

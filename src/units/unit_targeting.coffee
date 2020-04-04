@@ -88,8 +88,8 @@ reserveTarget = (unit) ->
   return undefined
 
 claimTarget = (unit) ->
-  targets = map(filter(flags, (f) -> f.color is flag_intents.CLAIM and
-                                     not any (f.name is f.name for u in values units)),
+  targets = map(filter(flags, ((f) -> f.color is flag_intents.CLAIM and
+                                     not any (f.name is u.memory.target for u in values units))),
                (f) => f.name)
   if targets.length
     return sample targets
@@ -155,8 +155,8 @@ resupplyTarget = (unit) ->
     resources.push(tombsFound...) if tombsFound?
 
   if resources.length
-    return getClosest(unit, resources).id
-  return undefined
+    closest = getClosest(unit, resources)
+  return if closest? then closest.id else undefined
 
 refillTarget = (unit) ->
   towers = []

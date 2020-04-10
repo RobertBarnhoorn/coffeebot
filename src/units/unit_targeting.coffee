@@ -13,9 +13,9 @@ transferTarget = (unit) ->
   for room in values rooms
     if unit.store[RESOURCE_ENERGY] > 0
       structuresFound = room.find FIND_MY_STRUCTURES,
-                                  filter: (s) -> s.energy < s.energyCapacity and
-                                                            s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
-                                                            not any (s.id is u.memory.target for u in values units)
+                                  filter: (s) -> s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
+                                                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 and
+                                                 not any (s.id is u.memory.target for u in values units)
       structures.push(structuresFound...) if structuresFound?
     storage.push(room.storage) if room.storage?
 

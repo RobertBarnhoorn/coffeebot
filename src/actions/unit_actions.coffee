@@ -47,22 +47,24 @@ harvest = (unit) ->
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target? or target.store.getFreeCapacity() == 0
+  if not target? or target.structureType == STRUCTURE_STORAGE or target.store.getFreeCapacity(RESOURCE_ENERGY) == 0
     unit.memory.target = transferTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?
       unit.memory.target = undefined
-      return false
+      return
 
   if unit.pos.inRangeTo(target, 1)
-    resourceTypes = (k for k in keys unit.store)
-    for type in resourceTypes
-      if unit.transfer(target, type) is OK
+    if unit.transfer(target, RESOURCE_ENERGY) is OK
+      # Successfully transferred resources so start heading towards the next target
+      unit.memory.target = if unit.store.getUsedCapacity() then transferTarget(unit) else collectTarget(unit)
+      target = Game.getObjectById(unit.memory.target)
+      if not target?
         unit.memory.target = undefined
-        break
-  else
-    location = pos: target.pos, range: 1
-    goTo location, unit
+        return
+
+  location = pos: target.pos, range: 1
+  goTo location, unit
 
 collect = (unit) ->
   unit.memory.target or= collectTarget unit
@@ -74,22 +76,25 @@ collect = (unit) ->
     target = Game.getObjectById(unit.memory.target)
     if not target?
       unit.memory.target = undefined
-      return false
+      return
 
   if unit.pos.inRangeTo(target, 1)
-    if unit.pickup(target) is OK
-      unit.memory.target = undefined
-    else
+    result = unit.pickup(target)
+    if result isnt OK
       resourceTypes = (k for k in keys unit.store)
       for type in resourceTypes
-        if unit.withdraw(target, type) is OK
-          unit.memory.target = undefined
-          break
-  else
-    location = pos: target.pos, range: 1
-    goTo location, unit
+        result = unit.withdraw(target, type)
+        break if result is OK
+    if result is OK
+      # Successfully collected resources so start heading towards the target we want to transfer them to
+      unit.memory.target = transferTarget unit
+      target = Game.getObjectById(unit.memory.target)
+      if not target?
+        unit.memory.target = undefined
+        return
 
-  return true
+  location = pos: target.pos, range: 1
+  goTo location, unit
 
 build = (unit) ->
   unit.memory.buildTarget or= buildTarget unit

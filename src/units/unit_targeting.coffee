@@ -1,4 +1,4 @@
-{ any, filter, keys, map, sample, shuffle, values } = require 'lodash'
+{ any, filter, keys, map, random, sample, shuffle, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -8,6 +8,9 @@
 { MYSELF } = require 'constants'
 
 transferTarget = (unit) ->
+  # Prioritise transferring to either the nearest extension/spawn or the nearest storage, depending on how
+  # energy-starved the spawning economy is. If we need energy for spawning it will be prioritized, otherwise
+  # the energy may be put into storage for later use
   structures = []
   storage = []
   for room in values rooms
@@ -15,15 +18,27 @@ transferTarget = (unit) ->
       structuresFound = room.find FIND_MY_STRUCTURES,
                                   filter: (s) -> s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
                                                  s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 and
-                                                 not any (s.id is u.memory.target for u in values units)
+                                                 s.id != unit.memory.target
       structures.push(structuresFound...) if structuresFound?
     storage.push(room.storage) if room.storage?
 
-  if structures.length
-    return getClosest(unit, structures).id
-  if storage.length
+  if not structures.length
+    if not storage.length
+      return undefined
     return getClosest(unit, storage).id
-  return undefined
+
+  normalisedDemand = structures.length / storage.length
+  closestStructure = getClosest unit, structures
+  closestStorage = getClosest unit, storage
+  closestStructure.cost = 1 if closestStructure.cost == 0
+  closestStorage.cost = 1 if closestStorage.cost == 0
+  normalisedCost = closestStructure.cost / closestStorage.cost
+  priority = normalisedDemand / normalisedCost
+  # Arbitrary threshold chosen by trial-and-error
+  if priority > 5
+    return closestStructure.id
+  else
+    return closestStorage.id
 
 collectTarget = (unit) ->
   resources = []
@@ -45,7 +60,6 @@ collectTarget = (unit) ->
     resources.push(containersFound...) if containersFound?
     resources.push(tombsFound...) if tombsFound?
     resources.push(ruinsFound...) if ruinsFound?
-
 
   uniques = filter resources, (r) -> not any (r.id is u.memory.target for u in values units)
   if uniques.length

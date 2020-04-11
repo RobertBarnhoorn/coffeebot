@@ -69,7 +69,7 @@ transfer = (unit) ->
 collect = (unit) ->
   unit.memory.target or= collectTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target? or
+  if not target? or target.structureType == STRUCTURE_STORAGE or
         (target.amount? and target.amount < unit.store.getCapacity()) or
         (target.store? and target.store.getUsedCapacity() < unit.store.getCapacity())
     unit.memory.target = collectTarget unit

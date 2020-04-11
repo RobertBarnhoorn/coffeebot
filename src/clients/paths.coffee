@@ -48,6 +48,7 @@ moveBy = (path, unit) ->
 
 # Find the closest of a list of targets by path
 getClosest = (entity, targets) ->
+  closest = undefined
   locations = map targets, ((t) -> pos: t.pos, range: 1)
   path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 20000
   if path.path.length
@@ -56,7 +57,13 @@ getClosest = (entity, targets) ->
   else
     # We are already at the destination
     destination = entity.pos
-  return find targets, ((t) -> t.pos.inRangeTo(destination, 1))
+
+  target = find targets, ((t) -> t.pos.inRangeTo(destination, 1))
+  if not target?
+    return undefined
+
+  closest = id: target.id, cost: path.cost
+  return closest
 
 # Find the optimal path from pos to loc, potentially across multiple rooms
 # If loc is an array of locations find the path to closest loc

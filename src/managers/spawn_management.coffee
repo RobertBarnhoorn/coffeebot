@@ -8,8 +8,9 @@
 { generateUnit } = require 'spawn_behaviours'
 { MYSELF } = require 'constants'
 
-priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.ENGINEER, roles.UPGRADER,
-              roles.RESERVER, roles.CLAIMER, roles.SNIPER, roles.SOLDIER, roles.MEDIC]
+priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.UPGRADER, roles.BUILDER, roles.REPAIRER,
+              roles.FORTIFIER, roles.RESERVER, roles.CLAIMER, roles.SNIPER, roles.SOLDIER,
+              roles.MEDIC]
 
 numRooms = (filter(rooms, (r) => r.controller?.my or r.controller?.reservation?.username is MYSELF)).length
 numSources = (flatten (s for s in r.find(FIND_SOURCES) for r in values rooms)).length
@@ -19,8 +20,10 @@ desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * numSources
     when roles.UPGRADER         then 1 * numRooms
-    when roles.ENGINEER         then 1 * numRooms
     when roles.TRANSPORTER      then 1 * numSources
+    when roles.BUILDER          then 2
+    when roles.FORTIFIER        then 2
+    when roles.REPAIRER         then 2
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

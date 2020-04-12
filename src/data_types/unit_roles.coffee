@@ -1,7 +1,9 @@
 roles =
   UPGRADER:    'upgrader'
   HARVESTER:   'harvester'
-  ENGINEER:    'engineer'
+  REPAIRER:    'repairer'
+  BUILDER:     'builder'
+  FORTIFIER:   'fortifier'
   TRANSPORTER: 'transporter'
   RESERVER:    'reserver'
   CLAIMER:     'claimer'

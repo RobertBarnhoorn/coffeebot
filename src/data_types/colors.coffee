@@ -21,7 +21,9 @@ colors =
 path_colors =
   [roles.UPGRADER]:    colors.OLIVE
   [roles.HARVESTER]:   colors.GREEN
-  [roles.ENGINEER]:    colors.NAVY
+  [roles.REPAIRER]:    colors.NAVY
+  [roles.FORTIFIER]:   colors.NAVY
+  [roles.BUILDER]:     colors.NAVY
   [roles.TRANSPORTER]: colors.TEAL
   [roles.RESERVER]:    colors.PURPLE
   [roles.CLAIMER]:     colors.FUCHSIA

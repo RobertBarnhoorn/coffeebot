@@ -4,7 +4,7 @@
 { units } = require 'units'
 { flags, flag_intents } = require 'flags'
 { upgrade, harvest, transfer, build,
-  repair, maintain, refillTower, shouldWork,
+  repair, fortify, refillTower, shouldWork,
   moveTo, resupply, collect, reserve,
   claim, invade, defend, patrol,
   attack }= require 'unit_actions'
@@ -26,10 +26,24 @@ upgrader = (unit) ->
   else
     resupply unit
 
-engineer = (unit) ->
+repairer = (unit) ->
   unit.memory.working = shouldWork unit
   if unit.memory.working
-    refillTower(unit) or repair(unit) or build(unit) or maintain(unit)
+    refillTower(unit) or repair(unit) or fortify(unit)
+  else
+    resupply unit
+
+fortifier = (unit) ->
+  unit.memory.working = shouldWork unit
+  if unit.memory.working
+    fortify unit
+  else
+    resupply unit
+
+builder = (unit) ->
+  unit.memory.working = shouldWork unit
+  if unit.memory.working
+    refillTower(unit) or build(unit) or repair(unit) or fortify(unit)
   else
     resupply unit
 
@@ -61,4 +75,4 @@ militant = (unit) ->
 
   unit.memory.actionttl -= 1
 
-module.exports = { harvester, upgrader, engineer, transporter, reserver, claimer, militant }
+module.exports = { harvester, upgrader, repairer, builder, fortifier, transporter, reserver, claimer, militant }

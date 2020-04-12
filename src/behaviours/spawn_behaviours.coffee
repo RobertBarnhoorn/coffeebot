@@ -11,15 +11,16 @@ generateUnit = (s, role) ->
     when roles.HARVESTER   then spawnHarvester s
     when roles.TRANSPORTER then spawnTransporter s
     when roles.UPGRADER    then spawnUpgrader s
-    when roles.ENGINEER    then spawnEngineer s
+    when roles.BUILDER     then spawnWorker s, roles.BUILDER
+    when roles.REPAIRER    then spawnWorker s, roles.REPAIRER
+    when roles.FORTIFIER   then spawnWorker s, roles.FORTIFIER
     when roles.RESERVER    then spawnReserver s
     when roles.CLAIMER     then spawnClaimer s
     when roles.SOLDIER     then spawnSoldier s
     when roles.SNIPER      then spawnSniper s
     when roles.MEDIC       then spawnMedic s
 
-spawnEngineer = (s) ->
-  role = roles.ENGINEER
+spawnWorker = (s, role) ->
   energy = maxEnergy(s)
   body = []
   loop

@@ -3,7 +3,7 @@
 { rooms } = require 'rooms'
 { getPath, moveTo, moveBy, goTo } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
-  maintainTarget, buildTarget, collectTarget, transferTarget,
+  fortifyTarget, buildTarget, collectTarget, transferTarget,
   flagTarget, claimTarget, resupplyTarget, refillTarget,
   healTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
@@ -47,7 +47,7 @@ harvest = (unit) ->
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target? or target.structureType == STRUCTURE_STORAGE or target.store.getFreeCapacity(RESOURCE_ENERGY) == 0
+  if not target? or not target.store.getFreeCapacity(RESOURCE_ENERGY) or target.structureType == STRUCTURE_STORAGE
     unit.memory.target = transferTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?
@@ -81,10 +81,7 @@ collect = (unit) ->
   if unit.pos.inRangeTo(target, 1)
     result = unit.pickup(target)
     if result isnt OK
-      resourceTypes = (k for k in keys unit.store)
-      for type in resourceTypes
-        result = unit.withdraw(target, type)
-        break if result is OK
+      result = unit.withdraw(target, RESOURCE_ENERGY)
     if result is OK
       # Successfully collected resources so start heading towards the target we want to transfer them to
       unit.memory.target = transferTarget unit
@@ -139,46 +136,37 @@ repair = (unit) ->
   # If we've already finished repairing it, choose another target
   unit.memory.repairTarget or= repairTarget unit
   target = Game.getObjectById(unit.memory.repairTarget)
-  if not target? or not target.room? or target.hits >= target.hitsMax or target.hits >= unit.memory.repairInitialHits + 10000
+  if not target? or not target.room? or target.hits >= target.hitsMax or not unit.store.getFreeCapacity(RESOURCE_ENERGY)
     unit.memory.repairTarget = repairTarget unit
     target = Game.getObjectById(unit.memory.repairTarget)
     # Couldn't find a visible target
     if not target? or not target.room?
       unit.memory.repairTarget = undefined
-      unit.memory.repairInitialHits = undefined
       return false
-    unit.memory.repairInitialHits = target.hits
-  unit.memory.repairInitialHits or= target.hits
   # Move to and repair the target
-  if unit.repair(target) == ERR_NOT_IN_RANGE
-    # Don't get stuck in current room if target is on the edge of next room
-    range = if unit.room.name isnt target.room.name then 1 else 3
-    location = pos: target.pos, range: range
-    goTo location, unit
+  unit.repair(target)
+  location = pos: target.pos, range: 1
+  goTo location, unit
   return true
 
-maintain = (unit) ->
-  # If we have an existing target we should try to maintain it
+fortify = (unit) ->
+  # If we have an existing target we should try to fortify it
   # If the target no longer exists, find a new one
-  # If we've already finished maintaining it, choose another target
-  unit.memory.maintainTarget or= maintainTarget unit
-  target = Game.getObjectById(unit.memory.maintainTarget)
-  if not target? or not target.room? or target.hits >= target.hitsMax or target.hits >= unit.memory.maintainInitialHits + 10000
-    unit.memory.maintainTarget = maintainTarget unit
-    target = Game.getObjectById(unit.memory.maintainTarget)
+  # If we've already finished fortifying it, choose another target
+  unit.memory.fortifyTarget or= fortifyTarget unit
+  target = Game.getObjectById(unit.memory.fortifyTarget)
+  if not target? or not target.room? or target.hits >= target.hitsMax or not unit.store.getFreeCapacity(RESOURCE_ENERGY)
+
+    unit.memory.fortifyTarget = fortifyTarget unit
+    target = Game.getObjectById(unit.memory.fortifyTarget)
     # Couldn't find a visible target
     if not target? or not target.room?
-      unit.memory.maintainTarget = undefined
-      unit.memory.maintainInitialHits = undefined
+      unit.memory.fortifyTarget = undefined
       return false
-    unit.memory.maintainInitialHits = target.hits
-  unit.memory.maintainInitialHits or= target.hits
-  # Move to and maintain the target
-  if unit.repair(target) == ERR_NOT_IN_RANGE
-    # Don't get stuck in current room if target is on the edge of next room
-    range = if unit.room.name isnt target.room.name then 1 else 3
-    location = pos: target.pos, range: range
-    goTo location, unit
+  # Move to and fortify the target
+  unit.repair(target)
+  location = pos: target.pos, range: 1
+  goTo location, unit
   return true
 
 refillTower = (unit) ->
@@ -387,7 +375,7 @@ shouldInvade = ->
   actual[roles.MEDIC] >= 3 and actual[roles.SOLDIER] >= 2 and actual[roles.SNIPER] >= 2
 
 module.exports = { upgrade, harvest, transfer, build,
-                   repair, maintain, refillTower, shouldWork,
+                   repair, fortify, refillTower, shouldWork,
                    moveTo, resupply, collect, claim,
                    reserve, patrol, attack, invade,
                    defend }

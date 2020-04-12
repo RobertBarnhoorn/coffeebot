@@ -44,18 +44,14 @@ collectTarget = (unit) ->
   resources = []
   for room in values rooms
     resourcesFound = room.find FIND_DROPPED_RESOURCES,
-                               filter: (r) -> r.amount >= unit.store.getCapacity() and
-                               not any (r.id is u.memory.target for u in values units)
+                               filter: (r) -> r.amount >= unit.store.getCapacity()
     containersFound = room.find FIND_STRUCTURES,
                                 filter: (s) -> s.structureType is STRUCTURE_CONTAINER and
-                                               s.store.getUsedCapacity >= unit.store.getCapacity() and
-                                               not any (s.id is u.memory.target for u in values units)
+                                               s.store.getUsedCapacity >= unit.store.getCapacity()
     tombsFound = room.find FIND_TOMBSTONES,
-                           filter: (t) -> t.store.getUsedCapacity() >= unit.store.getCapacity() and
-                                          not any (t.id is u.memory.target for u in values units)
+                           filter: (t) -> t.store.getUsedCapacity() >= unit.store.getCapacity()
     ruinsFound = room.find FIND_RUINS,
-                           filter: (r) -> r.store.getUsedCapacity() >= unit.store.getCapacity() and
-                                          not any (r.id is u.memory.target for u in values units)
+                           filter: (r) -> r.store.getUsedCapacity() >= unit.store.getCapacity()
     resources.push(resourcesFound...) if resourcesFound?
     resources.push(containersFound...) if containersFound?
     resources.push(tombsFound...) if tombsFound?
@@ -66,7 +62,7 @@ collectTarget = (unit) ->
     closest = getClosest(unit, uniques)
   else if resources.length
     closest = getClosest(unit, resources)
-  return if closest? then closest.id else undefined
+  return closest?.id
 
 upgradeTarget = (unit) ->
   candidates = (room for room in values rooms \
@@ -114,27 +110,24 @@ repairTarget = (unit) ->
   myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
   for room in myRooms
     structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) => s.structureType isnt STRUCTURE_WALL and \
-                                               (if s.my? then s.my else (s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER])) and \
-                                               ((s.hits < s.hitsMax and s.hits <= 2000) or
-                                               (s.structureType is STRUCTURE_CONTAINER and s.hits < 100000) or
-                                               (s.structureType is STRUCTURE_RAMPART and s.hits < 50000)) and \
-                                               not any (u.memory.repairTarget is s.id for u in values units)
+                                filter: (s) => s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
+                                               (if s.my? then s.my else (s.structureType is STRUCTURE_ROAD)) and
+                                               s.hits < s.hitsMax
     structures.push(structuresFound...) if structuresFound?
   if structures.length
     return getClosest(unit, structures).id
   return undefined
 
-maintainTarget = (unit) ->
+fortifyTarget = (unit) ->
   structures = []
-  myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
+  myRooms = filter values(rooms), ((r) -> r.controller?.my)
   for room in myRooms
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) => s.hits < s.hitsMax and
-                                               not any (s.id is u.memory.maintainTarget for u in values units)
+                                               s.structureType in [STRUCTURE_WALL, STRUCTURE_RAMPART]
     structures.push(structuresFound...) if structuresFound?
 
-  prioritized = structures.sort((a, b) => (a.hitsMax - a.hits) - (b.hitsMax - b.hits)) \
+  prioritized = structures.sort((a, b) => (a.hits - b.hits)) \
                           .slice(0, Math.ceil(Math.sqrt(structures.length)))
 
   if prioritized.length
@@ -192,6 +185,6 @@ healTarget = (unit) ->
   return undefined
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
-                   maintainTarget, buildTarget, collectTarget, transferTarget,
+                   fortifyTarget, buildTarget, collectTarget, transferTarget,
                    flagTarget, claimTarget, resupplyTarget, refillTarget,
                    healTarget }

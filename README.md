@@ -1,6 +1,8 @@
 # coffeebot
 **The best, if not the only, CoffeeScript Screeps AI**
 
+<img align="right" src="https://github.com/RobbieBarnhoorn/coffeebot/blob/master/res/colony.gif" alt="" width=320 height=320>
+
 ## About
 [Screeps](https://screeps.com/) is an MMO sandbox game for programmers.
 

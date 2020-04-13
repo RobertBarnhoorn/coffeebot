@@ -31,7 +31,7 @@ desired = (role) ->
     when roles.SOLDIER
       flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
     when roles.SNIPER
-      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 0 or flagCount[flag_intents.INVADE] * 2 or (if flagCount[flag_intents.PATROL] then 1 else 0)
+      flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.ATTACK] * 8 or flagCount[flag_intents.INVADE] * 2 or (if flagCount[flag_intents.PATROL] then 1 else 0)
     when roles.MEDIC
       flagCount[flag_intents.DEFEND] * 0 or flagCount[flag_intents.ATTACK] * 6 or flagCount[flag_intents.INVADE] * 4
 

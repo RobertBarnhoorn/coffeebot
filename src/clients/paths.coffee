@@ -50,7 +50,7 @@ moveBy = (path, unit) ->
 getClosest = (entity, targets) ->
   closest = undefined
   locations = map targets, ((t) -> pos: t.pos, range: 1)
-  path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 20000
+  path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 100000
   if path.path.length
     # Our destination is the last position of the path
     destination = last(path.path)

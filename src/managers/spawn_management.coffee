@@ -20,10 +20,10 @@ desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * numSources
     when roles.UPGRADER         then 1 * numRooms
-    when roles.TRANSPORTER      then 1 * numSources
-    when roles.BUILDER          then 2
-    when roles.FORTIFIER        then 2
-    when roles.REPAIRER         then 2
+    when roles.TRANSPORTER      then 1 * numRooms
+    when roles.BUILDER          then 1
+    when roles.FORTIFIER        then 1
+    when roles.REPAIRER         then 1
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

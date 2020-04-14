@@ -334,11 +334,25 @@ attackStructure = (unit) ->
     return false
   target = unit.pos.findClosestByPath FIND_HOSTILE_STRUCTURES,
                                       filter: (s) => s.structureType isnt STRUCTURE_CONTROLLER
-  if target?
-    if unit.attack(target) == ERR_NOT_IN_RANGE
-      moveTo target, unit
-    return true
-  return false
+  return false if not target?
+  switch unit.memory.role
+    when roles.SNIPER
+      # Kite enemies by staying *just* within range, and moving away if they get closer
+      if unit.pos.getRangeTo(target.pos) < 3
+        deltaX = unit.pos.x - target.pos.x
+        deltaY = unit.pos.y - target.pos.y
+        xPos = Math.max(Math.min(unit.pos.x + deltaX, 49), 1)
+        yPos = Math.max(Math.min(unit.pos.y + deltaY, 49), 1)
+        location = pos: new RoomPosition(xPos, yPos, unit.room.name), range: 0
+      else
+        location = pos: target.pos, range: 3
+      goTo location, unit
+      unit.rangedAttack(target)
+    else
+      if unit.attack(target) == ERR_NOT_IN_RANGE
+        location = pos: target.pos, range: 1
+        goTo location, unit
+  return true
 
 heal = (unit) ->
   if not unit.room.controller?.my and unit.room.controller?.safeMode

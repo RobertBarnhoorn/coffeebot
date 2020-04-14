@@ -19,7 +19,7 @@ flagCount = countBy flags, 'color'
 desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * numSources
-    when roles.UPGRADER         then 1 * numSources
+    when roles.UPGRADER         then 1 * numRooms
     when roles.TRANSPORTER      then 1 * numSources
     when roles.BUILDER          then 2
     when roles.FORTIFIER        then 2

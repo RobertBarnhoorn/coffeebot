@@ -12,17 +12,17 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.UPGRADER, roles.BUILDER,
               roles.FORTIFIER, roles.RESERVER, roles.CLAIMER, roles.SNIPER, roles.SOLDIER,
               roles.MEDIC]
 
-numRooms = (filter(rooms, (r) => r.controller?.my or r.controller?.reservation?.username is MYSELF)).length
-numSources = (flatten (s for s in r.find(FIND_SOURCES) for r in values rooms)).length
+myRooms = filter rooms, ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
+mySources = flatten (s for s in r.find(FIND_SOURCES) for r in myRooms)
 flagCount = countBy flags, 'color'
 
 desired = (role) ->
   switch role
-    when roles.HARVESTER        then 1 * numSources
-    when roles.UPGRADER         then 1 * numRooms
-    when roles.TRANSPORTER      then 1 * numRooms
+    when roles.HARVESTER        then 1 * mySources.length
+    when roles.UPGRADER         then 1 * mySources.length
+    when roles.TRANSPORTER      then 1 * mySources.length
     when roles.BUILDER          then 1
-    when roles.FORTIFIER        then 1
+    when roles.FORTIFIER        then 2
     when roles.REPAIRER         then 1
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]

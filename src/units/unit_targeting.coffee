@@ -65,14 +65,14 @@ collectTarget = (unit) ->
   return closest?.id
 
 upgradeTarget = (unit) ->
-  candidates = (room for room in values rooms \
-                when room.controller? and room.controller.my and not room.controller.reservation?)
+  candidates = (r for r in values rooms \
+                when r.controller? and r.controller.my and not r.controller.reservation?)
   return (sample candidates).controller.id
 
 harvestTarget = (unit) ->
   sources = []
-  for room in values rooms
-    sourcesFound = filter room.find(FIND_SOURCES),
+  for r in values rooms when r.controller?.my or r.controller?.reservation?.username is MYSELF
+    sourcesFound = filter r.find(FIND_SOURCES),
                           (s) -> not any (s.id == u.memory.target for u in values units)
     sources.push(sourcesFound...) if sourcesFound?
 

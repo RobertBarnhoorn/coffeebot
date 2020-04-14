@@ -23,7 +23,7 @@ desired = (role) ->
     when roles.TRANSPORTER      then 1 * mySources.length
     when roles.BUILDER          then 1
     when roles.FORTIFIER        then 2
-    when roles.REPAIRER         then 1
+    when roles.REPAIRER         then 2
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

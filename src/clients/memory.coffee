@@ -19,11 +19,11 @@ deleteMem = (k) -> delete _memory[k]
 # Get the memory of all units
 unitsMem = readMem 'creeps'
 
-# Get the memory of a specific unit
-unitMem = (u) -> unitsMem[u]
-
 # Delete the memory of a specific unit
 deleteUnitMem = (u) -> delete unitsMem[u]
+
+# Get the memory of all rooms
+roomsMem = readMem 'rooms'
 
 # Check if a memory location holds anything
 memExists = (k) -> (readMem k)?
@@ -32,5 +32,5 @@ memExists = (k) -> (readMem k)?
 usedMem = _rawMemory.get().length
 
 module.exports = { readMem, writeMem, deleteMem,
-                   unitsMem, unitMem, deleteUnitMem,
+                   unitsMem, deleteUnitMem, roomsMem,
                    memExists, usedMem }

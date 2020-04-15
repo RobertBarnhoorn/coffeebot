@@ -47,7 +47,7 @@ harvest = (unit) ->
 transfer = (unit) ->
   unit.memory.target or= transferTarget unit
   target = Game.getObjectById(unit.memory.target)
-  if not target? or not target.store.getFreeCapacity(RESOURCE_ENERGY) or target.structureType == STRUCTURE_STORAGE
+  if not target? or not target.store?.getFreeCapacity(RESOURCE_ENERGY) or target.structureType == STRUCTURE_STORAGE
     unit.memory.target = transferTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?

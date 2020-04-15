@@ -1,8 +1,8 @@
 { find, forEach, last, map } = require 'lodash'
 { rooms } = require 'rooms'
-{ cpuUsed } = require 'cpu'
+{ roomsMem} = require 'memory'
 
-costMatrices = {}
+matrices = {}
 
 moveTo = (location, unit) ->
   unit.moveTo location, reusePath: 5, maxRooms: 1, visualizePathStyle:
@@ -28,7 +28,8 @@ goTo = (location, unit) ->
   else
     unit.memory.ttl = 2
   if unit.memory.ttl <= 0
-    path = getPath(unit.pos, location, includeNonStatic=true).path
+    avoid = unit.pos.findInRange(FIND_CREEPS, 1)
+    path = getPath(unit.pos, location, avoid=avoid).path
 
   # If there is a path cached in memory then use it, otherwise recalculate
   path or= deserializePath unit.memory.path
@@ -67,11 +68,8 @@ getClosest = (entity, targets) ->
 
 # Find the optimal path from pos to loc, potentially across multiple rooms
 # If loc is an array of locations find the path to closest loc
-getPath = (pos, loc, includeNonStatic=false) ->
-  if includeNonStatic
-    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: generateCostMatrixIncludeNonStatic, maxOps: 20000
-  else
-    PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 20000
+getPath = (pos, loc, avoid=null) ->
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: ((roomName) -> getCostMatrix(roomName, avoid)), maxOps: 100000
 
 serializePath = (path) ->
   serializeRoomPos = (pos) -> pos.x + ',' + pos.y + ',' + pos.roomName
@@ -105,30 +103,40 @@ deserializePath = (pathStr) ->
 
   return deserialized
 
-getCostMatrix = (roomName) ->
-  costMatrix = costMatrices[roomName]
-  return costMatrix if costMatrix?
+getCostMatrix = (roomName, avoid=null) ->
+  # Check if this room's costMatrix has been cached this tick in the live object
+  costs = matrices[roomName]
+  if not costs?
+    # Not cached in the live object; check if it is cached in memory
+    if not roomsMem[roomName]?
+      roomsMem[roomName] = {}
 
+    if not roomsMem[roomName]['ttl']?
+      roomsMem[roomName]['ttl'] = -1
+
+    if roomsMem[roomName]['ttl'] > 0
+      # Use the cached matrix if it exists and is not stale
+      roomsMem[roomName]['ttl'] -= 1
+      costs = PathFinder.CostMatrix.deserialize roomsMem[roomName]['costs']
+      matrices[roomName] = costs
+    else
+      # Stale or not cached in memory; generate and cache a new costMatrix
+      roomsMem[roomName]['ttl'] = 100
+      costs = generateCostMatrix roomName, avoid
+      return null if not costs?
+      roomsMem[roomName]['costs'] = costs.serialize()
+      matrices[roomName] = costs
+
+  if avoid?
+    # Pathfind around anything in this list
+    forEach avoid, ((a) -> costs.set a.pos.x, a.pos.y, 0xff)
+
+  return costs
+
+generateCostMatrix = (roomName) ->
   room = Game.rooms[roomName]
   return if not room?
 
-  if room.memory.ttl > 0
-    room.memory.ttl -= 1
-    costMatrix = PathFinder.CostMatrix.deserialize(room.memory.costMatrix)
-    costMatrices[room.name] = costMatrix
-    return costMatrix
-
-  room.memory.ttl = 100
-  costMatrix = generateCostMatrix roomName
-  room.memory.costMatrix = costMatrix.serialize()
-  costMatrices[room.name] = costMatrix
-  return costMatrix
-
-generateCostMatrixIncludeNonStatic= (roomName) -> generateCostMatrix(roomName, includeNonStatic=true)
-
-generateCostMatrix = (roomName, includeNonStatic=false) ->
-  room = Game.rooms[roomName]
-  return if not room?
   costs = new PathFinder.CostMatrix
 
   forEach room.find(FIND_STRUCTURES), (s) ->
@@ -143,10 +151,6 @@ generateCostMatrix = (roomName, includeNonStatic=false) ->
        s.structureType isnt STRUCTURE_CONTAINER and \
       (s.structureType isnt STRUCTURE_RAMPART or not s.my)
       costs.set s.pos.x, s.pos.y, 0xff
-
-  if includeNonStatic
-    forEach room.find(FIND_CREEPS), (c) ->
-      costs.set c.pos.x, c.pos.y, 0xff
 
   return costs
 

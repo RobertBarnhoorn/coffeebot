@@ -9,7 +9,7 @@
 { MYSELF } = require 'constants'
 
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.UPGRADER, roles.BUILDER, roles.REPAIRER,
-              roles.FORTIFIER, roles.RESERVER, roles.CLAIMER, roles.SNIPER, roles.SOLDIER,
+              roles.FORTIFIER, roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER,
               roles.MEDIC]
 
 myRooms = filter rooms, ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
@@ -29,11 +29,11 @@ desired = (role) ->
     when roles.CLAIMER
       flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      flagCount[flag_intents.DEFEND] * 2 + flagCount[flag_intents.ATTACK] * 6 + flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 1 or flagCount[flag_intents.INVADE] * 4
     when roles.SNIPER
-      flagCount[flag_intents.DEFEND] * 2 + flagCount[flag_intents.ATTACK] * 8 + flagCount[flag_intents.INVADE] * 2 + (if flagCount[flag_intents.PATROL] then 1 else 0)
+      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 1 or flagCount[flag_intents.INVADE] * 2
     when roles.MEDIC
-      flagCount[flag_intents.DEFEND] * 0 + flagCount[flag_intents.ATTACK] * 6 + flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 0 or flagCount[flag_intents.INVADE] * 4
 
 populationControl = ->
   # Count the actual populations by role

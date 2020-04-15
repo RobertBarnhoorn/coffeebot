@@ -1,8 +1,6 @@
-{ find, forEach, last, map } = require 'lodash'
+{ find, filter, forEach, last, map } = require 'lodash'
 { rooms } = require 'rooms'
 { roomsMem} = require 'memory'
-
-matrices = {}
 
 moveTo = (location, unit) ->
   unit.moveTo location, reusePath: 5, maxRooms: 1, visualizePathStyle:
@@ -21,14 +19,14 @@ goTo = (location, unit) ->
   # If the unit is stuck we need to recalculate the path, factoring in other units in its way
   prevLoc = unit.memory.prevLoc ? {x: unit.pos.x, y: unit.pos.y}
   prevPrevLoc = unit.memory.prevPrevLoc ? {x: unit.pos.x, y: unit.pos.y}
-  if unit.fatigue is 0 and not unit.spawning and
+  if unit.memory.path?.length and unit.fatigue == 0 and not unit.spawning and
      unit.pos.isEqualTo(prevLoc.x, prevLoc.y) or
      unit.pos.isEqualTo(prevPrevLoc.x, prevPrevLoc.y)
     unit.memory.ttl -= 1
   else
     unit.memory.ttl = 2
   if unit.memory.ttl <= 0
-    avoid = unit.pos.findInRange(FIND_CREEPS, 1)
+    avoid = filter unit.pos.findInRange(FIND_CREEPS, 1), ((u) -> u != unit)
     path = getPath(unit.pos, location, avoid=avoid).path
 
   # If there is a path cached in memory then use it, otherwise recalculate
@@ -104,38 +102,42 @@ deserializePath = (pathStr) ->
   return deserialized
 
 getCostMatrix = (roomName, avoid=null) ->
-  # Check if this room's costMatrix has been cached this tick in the live object
-  costs = matrices[roomName]
+  # Initialise the matrices object if a global reset has occurred
+  if not global.matrices?
+    global.matrices = {}
+
+  # Make sure memory space has been assigned for the room
+  if not roomsMem[roomName]?
+    roomsMem[roomName] = {}
+
+  # Generate a new costMatrix if the Matrix isn't in cache or the cache entry is stale 
+  if not roomsMem[roomName]['ttl']? or roomsMem[roomName]['ttl'] <= 0
+    costs = generateCostMatrix roomName, avoid
+    return null if not costs?
+    global.matrices[roomName] = costs
+    roomsMem[roomName]['costs'] = costs.serialize()
+    roomsMem[roomName]['ttl'] = 100
+  else
+    roomsMem[roomName]['ttl'] -= 1
+
+  costs = global.matrices[roomName]
+
+  # Global cache miss so take from memory
   if not costs?
-    # Not cached in the live object; check if it is cached in memory
-    if not roomsMem[roomName]?
-      roomsMem[roomName] = {}
+    costs = PathFinder.CostMatrix.deserialize roomsMem[roomName]['costs']
+    global.matrices[roomName] = costs
 
-    if not roomsMem[roomName]['ttl']?
-      roomsMem[roomName]['ttl'] = -1
-
-    if roomsMem[roomName]['ttl'] > 0
-      # Use the cached matrix if it exists and is not stale
-      roomsMem[roomName]['ttl'] -= 1
-      costs = PathFinder.CostMatrix.deserialize roomsMem[roomName]['costs']
-      matrices[roomName] = costs
-    else
-      # Stale or not cached in memory; generate and cache a new costMatrix
-      roomsMem[roomName]['ttl'] = 100
-      costs = generateCostMatrix roomName, avoid
-      return null if not costs?
-      roomsMem[roomName]['costs'] = costs.serialize()
-      matrices[roomName] = costs
-
+  # Pathfind around anything in this list (usually other units)
   if avoid?
-    # Pathfind around anything in this list
-    forEach avoid, ((a) -> costs.set a.pos.x, a.pos.y, 0xff)
+    clone = costs.clone()
+    forEach avoid, ((a) -> clone.set a.pos.x, a.pos.y, 0xff)
+    return clone
 
   return costs
 
 generateCostMatrix = (roomName) ->
   room = Game.rooms[roomName]
-  return if not room?
+  return null if not room?
 
   costs = new PathFinder.CostMatrix
 

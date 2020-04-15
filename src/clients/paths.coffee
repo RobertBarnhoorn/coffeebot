@@ -11,39 +11,50 @@ moveTo = (location, unit) ->
                                                      opacity: .1
 
 goTo = (location, unit) ->
+  # Initialise the paths object if a global reset has occurred
+  if not global.paths?
+    global.paths = {}
+
+  prevLoc = unit.memory.prevLoc ? {x: unit.pos.x, y: unit.pos.y}
+  prevPrevLoc = unit.memory.prevPrevLoc ? {x: unit.pos.x, y: unit.pos.y}
+
+  pathChanged = false
+
   # If the target destination has changed we need to recalculate the path
   prevDest = unit.memory.prevDest ? {x: location.pos.x, y: location.pos.y, range: location.range}
   if prevDest.x isnt location.pos.x or prevDest.y isnt location.pos.y or prevDest.range isnt location.range
     path = getPath(unit.pos, location).path
-
-  # If the unit is stuck we need to recalculate the path, factoring in other units in its way
-  prevLoc = unit.memory.prevLoc ? {x: unit.pos.x, y: unit.pos.y}
-  prevPrevLoc = unit.memory.prevPrevLoc ? {x: unit.pos.x, y: unit.pos.y}
-  if unit.memory.path?.length and unit.fatigue == 0 and not unit.spawning and
-     unit.pos.isEqualTo(prevLoc.x, prevLoc.y) or
-     unit.pos.isEqualTo(prevPrevLoc.x, prevPrevLoc.y)
-    unit.memory.ttl -= 1
-  else
-    unit.memory.ttl = 2
-  if unit.memory.ttl <= 0
+    pathChanged = true
+  # If the unit is stuck we need to help it dodge the obstacle
+  else if unit.pos.isEqualTo prevPrevLoc.x, prevPrevLoc.y
     avoid = filter unit.pos.findInRange(FIND_CREEPS, 1), ((u) -> u != unit)
     path = getPath(unit.pos, location, avoid=avoid).path
+    pathChanged = true
 
-  # If there is a path cached in memory then use it, otherwise recalculate
+  # See if the path is cached in the global object
+  path or= global.paths[unit.name]
+  # See if the path is cached in memory and deserialize it
   path or= deserializePath unit.memory.path
+
+  # The path is not cached at all so calculate it and cache it
   if not path?
     path = getPath(unit.pos, location).path
+    pathChanged = true
 
   moveBy path, unit
+
+  # Cache the new path
+  if pathChanged
+    global.paths[unit.name] = path
+    unit.memory.path = serializePath path
+
+  # Store relevant coordinates for next tick
   unit.memory.prevPrevLoc = x: prevLoc.x, y: prevLoc.y
   unit.memory.prevLoc = x: unit.pos.x, y: unit.pos.y
   unit.memory.prevDest = x: location.pos.x, y: location.pos.y, range: location.range
-  unit.memory.path = serializePath path
 
 moveBy = (path, unit) ->
-  unit.room.visual.poly (p for p in path when p.roomName is unit.room.name)
-  if unit.moveByPath(path) is OK
-    path.shift()
+  unit.moveByPath(path)
 
 # Find the closest of a list of targets by path
 getClosest = (entity, targets) ->
@@ -116,7 +127,7 @@ getCostMatrix = (roomName, avoid=null) ->
     return null if not costs?
     global.matrices[roomName] = costs
     roomsMem[roomName]['costs'] = costs.serialize()
-    roomsMem[roomName]['ttl'] = 100
+    roomsMem[roomName]['ttl'] = 200
   else
     roomsMem[roomName]['ttl'] -= 1
 

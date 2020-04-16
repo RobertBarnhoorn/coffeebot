@@ -21,7 +21,7 @@ desired = (role) ->
     when roles.HARVESTER        then 1 * mySources.length
     when roles.UPGRADER         then 1 * mySources.length
     when roles.TRANSPORTER      then 1 * mySources.length
-    when roles.BUILDER          then 2
+    when roles.BUILDER          then 4
     when roles.FORTIFIER        then 2
     when roles.REPAIRER         then 2
     when roles.RESERVER

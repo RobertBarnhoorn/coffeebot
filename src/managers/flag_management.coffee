@@ -12,7 +12,7 @@ placeDefensiveFlags = ->
   return if any (f.color is flag_intents.DEFEND for f in values flags)
 
   for r in values(rooms) when r.controller?.my or r.controller?.reservation?.username is MYSELF
-    if r.find(FIND_HOSTILE_CREEPS).length
+    if r.find(FIND_HOSTILE_CREEPS).length or r.find(FIND_HOSTILE_STRUCTURES).length
       r.createFlag(25, 25, 'defend', flag_intents.DEFEND)
       break
 

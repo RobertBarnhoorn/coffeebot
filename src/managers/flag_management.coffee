@@ -1,4 +1,4 @@
-{ filter, includes, map, random, some, values } = require 'lodash'
+{ any, filter, includes, map, random, some, values } = require 'lodash'
 { flags, flag_intents } = require 'flags'
 { rooms } = require 'rooms'
 { MYSELF } = require 'constants'
@@ -9,6 +9,8 @@ flagManagement = ->
 
 placeDefensiveFlags = ->
   # Place defensive flags in our rooms where there are hostiles present
+  return if any (f.color is flag_intents.DEFEND for f in values flags)
+
   for r in values(rooms) when r.controller?.my or r.controller?.reservation?.username is MYSELF
     if r.find(FIND_HOSTILE_CREEPS).length
       r.createFlag(25, 25, 'defend', flag_intents.DEFEND)

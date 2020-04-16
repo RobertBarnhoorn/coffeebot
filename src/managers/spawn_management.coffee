@@ -21,7 +21,7 @@ desired = (role) ->
     when roles.HARVESTER        then 1 * mySources.length
     when roles.UPGRADER         then 1 * mySources.length
     when roles.TRANSPORTER      then 1 * mySources.length
-    when roles.BUILDER          then 1
+    when roles.BUILDER          then 2
     when roles.FORTIFIER        then 2
     when roles.REPAIRER         then 2
     when roles.RESERVER
@@ -29,9 +29,9 @@ desired = (role) ->
     when roles.CLAIMER
       flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 1 or flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 4
     when roles.SNIPER
-      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 1 or flagCount[flag_intents.INVADE] * 2
+      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 2
     when roles.MEDIC
       flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 0 or flagCount[flag_intents.INVADE] * 4
 

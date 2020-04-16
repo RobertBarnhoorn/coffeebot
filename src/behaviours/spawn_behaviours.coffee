@@ -123,13 +123,11 @@ spawnSoldier = (s) ->
     break if energy < minEnergy()
     energy = putBodyPart(s, body, ATTACK, energy)
     break if energy < minEnergy()
-    energy = putBodyPart(s, body, TOUGH, energy)
-    break if energy < minEnergy()
   memory =
     role: role
     working: false
 
-  spawnUnit(s, role, body, memory) if body.length >= 2 and body.length % 3 == 0
+  spawnUnit(s, role, body, memory) if body.length >= 2 and body.length % 2 == 0
 
 spawnSniper = (s) ->
   role = roles.SNIPER

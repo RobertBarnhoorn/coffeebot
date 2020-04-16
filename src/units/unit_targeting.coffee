@@ -131,7 +131,7 @@ fortifyTarget = (unit) ->
                           .slice(0, Math.ceil(Math.sqrt(structures.length)))
 
   if prioritized.length
-    return getClosest(unit, prioritized).id
+    return getClosest(unit, prioritized)?.id
   return undefined
 
 buildTarget = (unit) ->

@@ -25,13 +25,21 @@ transferTarget = (unit) ->
   if not structures.length
     if not storage.length
       return undefined
-    return getClosest(unit, storage).id
+    closest = getClosest(unit, storage)
+    if closest?
+      return closest.id
 
-  normalisedDemand = structures.length / storage.length
   closestStructure = getClosest unit, structures
   closestStorage = getClosest unit, storage
+  if not closestStructure?
+    if not closestStorage?
+      return undefined
+    return closestStorage.id
+
   closestStructure.cost = 1 if closestStructure.cost == 0
   closestStorage.cost = 1 if closestStorage.cost == 0
+
+  normalisedDemand = structures.length / storage.length
   normalisedCost = closestStructure.cost / closestStorage.cost
   priority = normalisedDemand / normalisedCost
   # Arbitrary threshold chosen by trial-and-error
@@ -42,68 +50,86 @@ transferTarget = (unit) ->
 
 collectTarget = (unit) ->
   resources = []
+  threshold = 0.7 * unit.store.getCapacity()
   for room in values rooms
     resourcesFound = room.find FIND_DROPPED_RESOURCES,
-                               filter: (r) -> r.amount >= unit.store.getCapacity()
+                               filter: (r) -> r.amount >= threshold
     containersFound = room.find FIND_STRUCTURES,
                                 filter: (s) -> s.structureType is STRUCTURE_CONTAINER and
-                                               s.store.getUsedCapacity >= unit.store.getCapacity()
+                                               s.store.getUsedCapacity >= threshold
     tombsFound = room.find FIND_TOMBSTONES,
-                           filter: (t) -> t.store.getUsedCapacity() >= unit.store.getCapacity()
+                           filter: (t) -> t.store.getUsedCapacity() >= threshold
     ruinsFound = room.find FIND_RUINS,
-                           filter: (r) -> r.store.getUsedCapacity() >= unit.store.getCapacity()
+                           filter: (r) -> r.store.getUsedCapacity() >= threshold
     resources.push(resourcesFound...) if resourcesFound?
     resources.push(containersFound...) if containersFound?
     resources.push(tombsFound...) if tombsFound?
     resources.push(ruinsFound...) if ruinsFound?
 
-  uniques = filter resources, (r) -> not any (r.id is u.memory.target for u in values units)
-  if uniques.length
-    closest = getClosest(unit, uniques)
-  else if resources.length
-    closest = getClosest(unit, resources)
-  return closest?.id
+  closest = getClosest unit, resources
+  if closest?
+    return closest.id
+  return (sample resources).id
 
 upgradeTarget = (unit) ->
-  candidates = (r for r in values rooms \
-                when r.controller? and r.controller.my and not r.controller.reservation?)
-  return (sample candidates).controller.id
+  rooms = (r for r in values rooms when r.controller?.my and not r.controller.reservation?)
+  controllers = map rooms, ((r) -> r.controller)
+  numUpgraders = (c) -> (u for u in values units when u.memory.target is c.id ).length
+  undersaturated = controllers.sort((c1, c2) -> (numUpgraders c1) - (numUpgraders c2)) \
+                              .slice(0, Math.ceil(Math.sqrt(controllers.length)))
+  closest = getClosest unit, undersaturated
+  if closest?
+    return closest.id
+  return (sample undersaturated).controller.id
 
 harvestTarget = (unit) ->
   sources = []
   for r in values rooms when r.controller?.my or r.controller?.reservation?.username is MYSELF
     sourcesFound = filter r.find(FIND_SOURCES),
-                          (s) -> not any (s.id == u.memory.target for u in values units)
+                          (s) -> not any (s.id is u.memory.target for u in values units)
     sources.push(sourcesFound...) if sourcesFound?
 
-  if sources.length
-    closest = getClosest(unit, sources)
-    return closest.id if closest?
-  return undefined
+  if not sources.length
+    return undefined
 
-flagTarget = (unit, flag_intent) ->
-  targets = map(filter(flags, (f) => f.color is flag_intent),
-               (f) => f.name)
-  if targets.length
-    return sample targets
-  return undefined
+  closest = getClosest(unit, sources)
+  if closest?
+    return closest.id
+  return (sample sources).id
+
+flagTarget = (unit, flag_intent, exclude=null) ->
+  targets = filter flags, ((f) => f.color is flag_intent and f.name != exclude)
+
+  if not targets.length
+    return undefined
+
+  closest = getClosest unit, targets
+  if closest?
+    return closest.name
+  return (sample targets).name
 
 reserveTarget = (unit) ->
-  targets = map(filter(flags, ((f) -> f.color is flag_intents.RESERVE and
-                                      not any (f.name is u.memory.target for u in values units))),
-               (f) => f.name)
+  targets = filter flags, ((f) -> f.color is flag_intents.RESERVE and
+                                  not any (f.name is u.memory.target for u in values units))
 
-  if targets.length
-    return sample targets
-  return undefined
+  if not targets.length
+    return undefined
+
+  closest = getClosest unit, targets
+  if closest?
+    return closest.name
+  return (sample targets).name
 
 claimTarget = (unit) ->
-  targets = map(filter(flags, ((f) -> f.color is flag_intents.CLAIM and
-                                     not any (f.name is u.memory.target for u in values units))),
-               (f) => f.name)
-  if targets.length
-    return sample targets
-  return undefined
+  targets = filter flags, ((f) -> f.color is flag_intents.CLAIM and
+                                  not any (f.name is u.memory.target for u in values units))
+  if not targets.length
+    return undefined
+
+  closest = getClosest unit, targets
+  if closest?
+    return closest.name
+  return (sample targets).name
 
 repairTarget = (unit) ->
   structures = []
@@ -114,9 +140,14 @@ repairTarget = (unit) ->
                                                (if s.my? then s.my else (s.structureType is STRUCTURE_ROAD)) and
                                                s.hits < s.hitsMax
     structures.push(structuresFound...) if structuresFound?
-  if structures.length
-    return getClosest(unit, structures).id
-  return undefined
+
+  if not structures.length
+    return undefined
+
+  closest = getClosest(unit, structures)
+  if closest?
+    return closest.id
+  return (sample structures).d
 
 fortifyTarget = (unit) ->
   structures = []
@@ -130,9 +161,13 @@ fortifyTarget = (unit) ->
   prioritized = structures.sort((a, b) => (a.hits - b.hits)) \
                           .slice(0, Math.ceil(Math.sqrt(structures.length)))
 
-  if prioritized.length
-    return getClosest(unit, prioritized)?.id
-  return undefined
+  if not prioritized.length
+    return undefined
+
+  closet = getClosest(unit, prioritized)
+  if closest?
+    return closest.id
+  return (sample prioritized).id
 
 buildTarget = (unit) ->
   sites = []
@@ -141,9 +176,14 @@ buildTarget = (unit) ->
     sitesFound = room.find FIND_MY_CONSTRUCTION_SITES,
                            filter: (s) => not any(s.id is u.memory.buildTarget for u in values units)
     sites.push(sitesFound...) if sitesFound?
-  if sites.length
-    return getClosest(unit, sites).id
-  return undefined
+
+  if not sites.length
+    return undefined
+
+  closest = getClosest(unit, sites)
+  if closest?
+    return closest.id
+  return (sample sites).id
 
 resupplyTarget = (unit) ->
   resources = []
@@ -161,9 +201,13 @@ resupplyTarget = (unit) ->
     resources.push(storesFound...) if storesFound?
     resources.push(tombsFound...) if tombsFound?
 
-  if resources.length
-    closest = getClosest(unit, resources)
-  return if closest? then closest.id else undefined
+  if not resources.length
+    return undefined
+
+  closest = getClosest(unit, resources)
+  if closest?
+    return closest.id
+  return (sample resources).id
 
 refillTarget = (unit) ->
   towers = []
@@ -173,9 +217,12 @@ refillTarget = (unit) ->
                                            s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
     towers.push(towersFound...) if towersFound?
 
-  if towers.length
-    return getClosest(unit, towers).id
-  return undefined
+  if not towers.length
+    return undefined
+  closest = getClosest(unit, towers)
+  if closest?
+    return closest.id
+  return (sample towers).id
 
 healTarget = (unit) ->
   targets = unit.room.find FIND_MY_CREEPS

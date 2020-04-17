@@ -54,13 +54,14 @@ goTo = (location, unit) ->
   unit.memory.prevDest = x: location.pos.x, y: location.pos.y, range: location.range
 
 moveBy = (path, unit) ->
+  unit.room.visual.poly (p for p in path when p.roomName is unit.room.name)
   unit.moveByPath(path)
 
 # Find the closest of a list of targets by path
 getClosest = (entity, targets) ->
   closest = undefined
   locations = map targets, ((t) -> pos: t.pos, range: 1)
-  path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 100000
+  path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 1000000
   if path.path.length
     # Our destination is the last position of the path
     destination = last(path.path)
@@ -72,13 +73,13 @@ getClosest = (entity, targets) ->
   if not target?
     return undefined
 
-  closest = id: target.id, cost: path.cost
+  closest = id: target.id, name: target.name, cost: path.cost
   return closest
 
 # Find the optimal path from pos to loc, potentially across multiple rooms
 # If loc is an array of locations find the path to closest loc
 getPath = (pos, loc, avoid=null) ->
-  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: ((roomName) -> getCostMatrix(roomName, avoid)), maxOps: 100000
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: ((roomName) -> getCostMatrix(roomName, avoid)), maxOps: 1000000
 
 serializePath = (path) ->
   serializeRoomPos = (pos) -> pos.x + ',' + pos.y + ',' + pos.roomName

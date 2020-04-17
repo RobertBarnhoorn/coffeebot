@@ -67,11 +67,12 @@ transfer = (unit) ->
   goTo location, unit
 
 collect = (unit) ->
+  threshold = 0.35 * unit.store.getCapacity()
   unit.memory.target or= collectTarget unit
   target = Game.getObjectById(unit.memory.target)
   if not target? or target.structureType == STRUCTURE_STORAGE or
-        (target.amount? and target.amount < unit.store.getCapacity()) or
-        (target.store? and target.store.getUsedCapacity() < unit.store.getCapacity())
+        (target.amount? and target.amount < threshold) or
+        (target.store? and target.store.getUsedCapacity() < threshold)
     unit.memory.target = collectTarget unit
     target = Game.getObjectById(unit.memory.target)
     if not target?
@@ -102,9 +103,10 @@ build = (unit) ->
     if not target?
       unit.memory.buildTarget = undefined
       return false
-  if unit.build(target) == ERR_NOT_IN_RANGE
-    location = pos: target.pos, range: (if unit.room.name isnt target.room.name then 1 else 3)
-    goTo location, unit
+  # Move to and build the target
+  unit.build target
+  location = pos: target.pos, range: 1
+  goTo location, unit
   return true
 
 resupply = (unit) ->
@@ -294,7 +296,7 @@ patrol = (unit) ->
   return if not target?
 
   if unit.pos.inRangeTo(target.pos, 1)
-    unit.memory.target = flagTarget unit, flag_intents.PATROL
+    unit.memory.target = flagTarget(unit, flag_intents.PATROL, exclude=unit.memory.target)
     target = flags[unit.memory.target]
   else
     location = pos: target.pos, range: 1

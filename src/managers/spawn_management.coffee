@@ -19,11 +19,11 @@ flagCount = countBy flags, 'color'
 desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * mySources.length
-    when roles.UPGRADER         then 1 * mySources.length
     when roles.TRANSPORTER      then 1 * mySources.length
-    when roles.BUILDER          then 4
-    when roles.FORTIFIER        then 2
-    when roles.REPAIRER         then 2
+    when roles.UPGRADER         then 1 * myRooms.length
+    when roles.BUILDER          then 3
+    when roles.FORTIFIER        then 3
+    when roles.REPAIRER         then 3
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

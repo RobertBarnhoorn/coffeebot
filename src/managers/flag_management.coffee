@@ -13,8 +13,10 @@ flagManagement = ->
   do placeDefensiveFlags
 
 placeDefensiveFlags = ->
-  for r in values(rooms) when r.controller?.my or r.controller?.reservation?.username is MYSELF
-    # Place defensive flags in our rooms where there are hostiles present
+  # Place defensive flags in our rooms where there are hostiles present
+  for r in values(rooms) when r.controller?.my or
+      r.controller?.reservation?.username is MYSELF or
+      any(f.room is r for f in values flags)
     if (filter r.find(FIND_HOSTILE_CREEPS),
                ((c) -> some([ATTACK, RANGED_ATTACK],
                            (p) -> includes(map(c.body,

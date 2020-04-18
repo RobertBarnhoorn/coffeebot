@@ -14,6 +14,6 @@ cpuTickLimit = _cpu['tickLimit']
 # Unused CPU accumulated in your bucket
 cpuBucket = _cpu['bucket']
 
-cpuUsed =-> Game.cpu.getUsed()
+cpuUsed = -> Game.cpu.getUsed()
 
 module.exports = { cpuLimit, cpuTickLimit, cpuBucket, cpuUsed }

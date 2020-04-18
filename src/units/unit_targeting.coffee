@@ -5,6 +5,7 @@
 { getPath, getClosest } = require 'paths'
 { units } = require 'units'
 { flags, flag_intents } = require 'flags'
+{ cpuUsed } = require 'cpu'
 { MYSELF } = require 'constants'
 
 transferTarget = (unit) ->

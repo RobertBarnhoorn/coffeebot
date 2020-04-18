@@ -1,7 +1,7 @@
 { shuffle, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { units } = require 'units'
-{ harvester, upgrader, repairer, fortifier, builder, transporter, reserver, claimer, militant } = require 'unit_behaviours'
+{ harvester, upgrader, repairer, fortifier, builder, transporter, miner, reserver, claimer, militant } = require 'unit_behaviours'
 
 unitManagement = ->
   for u in shuffle values units
@@ -11,6 +11,7 @@ unitManagement = ->
         when roles.REPAIRER then repairer u
         when roles.FORTIFIER then fortifier u
         when roles.BUILDER then builder u
+        when roles.MINER then miner u
         when roles.TRANSPORTER then transporter u
         when roles.RESERVER then reserver u
         when roles.CLAIMER then claimer u

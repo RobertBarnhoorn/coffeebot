@@ -14,6 +14,7 @@ generateUnit = (s, role) ->
     when roles.BUILDER     then spawnWorker s, roles.BUILDER
     when roles.REPAIRER    then spawnWorker s, roles.REPAIRER
     when roles.FORTIFIER   then spawnWorker s, roles.FORTIFIER
+    when roles.MINER       then spawnMiner s
     when roles.RESERVER    then spawnReserver s
     when roles.CLAIMER     then spawnClaimer s
     when roles.SOLDIER     then spawnSoldier s
@@ -47,6 +48,27 @@ spawnHarvester = (s) ->
     break if energy < minEnergy() or body.length >= 8
     energy = putBodyPart(s, body, WORK, energy)
     break if energy < minEnergy() or body.length >= 8
+  memory =
+    role: role
+    working: false
+
+  spawnUnit(s, role, body, memory) if body.length >= 3
+
+spawnMiner = (s) ->
+  role = roles.MINER
+  energy = maxEnergy(s)
+  body = []
+  loop
+    energy = putBodyPart(s, body, MOVE, energy)
+    break if energy < minEnergy() or body.length >= 50
+    energy = putBodyPart(s, body, WORK, energy)
+    break if energy < minEnergy() or body.length >= 50
+    energy = putBodyPart(s, body, WORK, energy)
+    break if energy < minEnergy() or body.length >= 50
+    energy = putBodyPart(s, body, WORK, energy)
+    break if energy < minEnergy() or body.length >= 50
+    energy = putBodyPart(s, body, WORK, energy)
+    break if energy < minEnergy() or body.length >= 50
   memory =
     role: role
     working: false

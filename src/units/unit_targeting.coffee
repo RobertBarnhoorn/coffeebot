@@ -21,7 +21,8 @@ transferTarget = (unit) ->
                                                  s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 and
                                                  s.id != unit.memory.target
       structures.push(structuresFound...) if structuresFound?
-    storage.push(room.storage) if room.storage? and room.storage.store.getFreeCapacity()
+    storage.push(room.storage) if room.storage?
+
 
   if not structures.length
     if not storage.length
@@ -97,6 +98,23 @@ harvestTarget = (unit) ->
   if closest?
     return closest.id
   return (sample sources).id
+
+mineTarget = (unit) ->
+  mines = []
+  for r in values rooms when r.controller?.my
+    minesFound = filter r.find(FIND_MINERALS),
+                        ((m) -> (filter m.pos.findInRange(FIND_STRUCTURES, 0),
+                                        ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0 and
+                                not any (m.id is u.memory.target for u in values units))
+    mines.push(minesFound...) if minesFound?
+
+  if not mines.length
+    return undefined
+
+  closest = getClosest(unit, mines)
+  if closest?
+    return closest.id
+  return (sample mines).id
 
 flagTarget = (unit, flag_intent, exclude=null) ->
   targets = filter flags, ((f) => f.color is flag_intent and f.name != exclude)
@@ -235,4 +253,4 @@ healTarget = (unit) ->
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    fortifyTarget, buildTarget, collectTarget, transferTarget,
                    flagTarget, claimTarget, resupplyTarget, refillTarget,
-                   healTarget }
+                   healTarget, mineTarget }

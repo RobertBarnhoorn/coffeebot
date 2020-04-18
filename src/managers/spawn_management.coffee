@@ -9,11 +9,14 @@
 { MYSELF } = require 'constants'
 
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.UPGRADER, roles.BUILDER, roles.REPAIRER,
-              roles.FORTIFIER, roles.RESERVER, roles.CLAIMER, roles.SOLDIER, roles.SNIPER,
-              roles.MEDIC]
+              roles.FORTIFIER, roles.MINER, roles.RESERVER, roles.CLAIMER, roles.SOLDIER,
+              roles.SNIPER, roles.MEDIC]
 
 myRooms = filter rooms, ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
 mySources = flatten (s for s in r.find(FIND_SOURCES) for r in myRooms)
+myExtractors = filter rooms, ((r) -> r.controller?.my and
+                             (filter r.find(FIND_MY_STRUCTURES),
+                                    ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0)
 flagCount = countBy flags, 'color'
 
 desired = (role) ->
@@ -22,8 +25,9 @@ desired = (role) ->
     when roles.TRANSPORTER      then 1 * mySources.length
     when roles.UPGRADER         then 1 * myRooms.length
     when roles.BUILDER          then 3
-    when roles.FORTIFIER        then 3
     when roles.REPAIRER         then 3
+    when roles.FORTIFIER        then 3
+    when roles.MINER            then 1 * myExtractors.length
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

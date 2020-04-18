@@ -7,10 +7,13 @@
   repair, fortify, refillTower, shouldWork,
   moveTo, resupply, collect, reserve,
   claim, invade, defend, patrol,
-  attack }= require 'unit_actions'
+  attack, mine }= require 'unit_actions'
 
 harvester = (unit) ->
   harvest unit
+
+miner = (unit) ->
+  mine unit
 
 transporter = (unit) ->
   unit.memory.working = shouldWork unit
@@ -81,4 +84,4 @@ militant = (unit) ->
 
   unit.memory.actionttl -= 1
 
-module.exports = { harvester, upgrader, repairer, builder, fortifier, transporter, reserver, claimer, militant }
+module.exports = { harvester, upgrader, repairer, builder, fortifier, miner, transporter, reserver, claimer, militant }

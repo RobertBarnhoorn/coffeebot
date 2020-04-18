@@ -5,7 +5,7 @@
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
   fortifyTarget, buildTarget, collectTarget, transferTarget,
   flagTarget, claimTarget, resupplyTarget, refillTarget,
-  healTarget } = require 'unit_targeting'
+  healTarget, mineTarget } = require 'unit_targeting'
 { flags, flag_intents } = require 'flags'
 { units } = require 'units'
 
@@ -44,51 +44,83 @@ harvest = (unit) ->
     else
       goTo location, unit
 
+mine = (unit) ->
+  unit.memory.target or= mineTarget unit
+  target = Game.getObjectById unit.memory.target
+  if not target?
+    unit.memory.target = mineTarget unit
+    target = Game.getObjectById unit.memory.target
+  if not target?
+    unit.memory.target = undefined
+    return
+
+  if unit.memory.inPosition
+    unit.harvest target
+  else
+    containers = filter target.pos.findInRange(FIND_STRUCTURES, 1),
+                        (s) -> s.structureType is STRUCTURE_CONTAINER
+
+    # If there is a container by the extractor, sit on top of it, else sit next to the source
+    if containers.length
+      location = pos: containers[0].pos, range: 0
+    else
+      location = pos: target.pos, range: 1
+
+    # Once we reach the target location we only have to harvest
+    if unit.pos.inRangeTo(location.pos, location.range)
+      unit.memory.inPosition = true
+    else
+      goTo location, unit
+
 transfer = (unit) ->
-  unit.memory.target or= transferTarget unit
-  target = Game.getObjectById(unit.memory.target)
-  if not target? or not target.store?.getFreeCapacity(RESOURCE_ENERGY) or target.structureType == STRUCTURE_STORAGE
-    unit.memory.target = transferTarget unit
-    target = Game.getObjectById(unit.memory.target)
+  unit.memory.transferTarget or= transferTarget unit
+  target = Game.getObjectById(unit.memory.transferTarget)
+  if not target? or not target.store? or
+     target.store.getUsedCapacity() == target.store.getCapacity() or
+     target.structureType is STRUCTURE_STORAGE
+    unit.memory.transferTarget = transferTarget unit
+    target = Game.getObjectById(unit.memory.transferTarget)
     if not target?
-      unit.memory.target = undefined
+      unit.memory.transferTarget = undefined
       return
 
   if unit.pos.inRangeTo(target, 1)
-    if unit.transfer(target, RESOURCE_ENERGY) is OK
-      # Successfully transferred resources so start heading towards the next target
-      unit.memory.target = if unit.store.getUsedCapacity() then transferTarget(unit) else collectTarget(unit)
-      target = Game.getObjectById(unit.memory.target)
-      if not target?
-        unit.memory.target = undefined
-        return
+    for type in keys unit.store
+      if unit.transfer(target, type) is OK
+        # Successfully transferred resources so start heading towards the next target
+        unit.memory.transferTarget = if unit.store.getUsedCapacity() then transferTarget(unit) else collectTarget(unit)
+        target = Game.getObjectById(unit.memory.transferTarget)
+        if not target?
+          unit.memory.transferTarget = undefined
+          return
+        break
 
   location = pos: target.pos, range: 1
   goTo location, unit
 
 collect = (unit) ->
   threshold = 0.35 * unit.store.getCapacity()
-  unit.memory.target or= collectTarget unit
-  target = Game.getObjectById(unit.memory.target)
+  unit.memory.collectTarget or= collectTarget unit
+  target = Game.getObjectById(unit.memory.collectTarget)
   if not target? or target.structureType == STRUCTURE_STORAGE or
         (target.amount? and target.amount < threshold) or
         (target.store? and target.store.getUsedCapacity() < threshold)
-    unit.memory.target = collectTarget unit
-    target = Game.getObjectById(unit.memory.target)
+    unit.memory.collectTarget = collectTarget unit
+    target = Game.getObjectById(unit.memory.collectTarget)
     if not target?
-      unit.memory.target = undefined
+      unit.memory.collectTarget = undefined
       return
 
   if unit.pos.inRangeTo(target, 1)
     result = unit.pickup(target)
     if result isnt OK
-      result = unit.withdraw(target, RESOURCE_ENERGY)
+      result = unit.withdraw(target)
     if result is OK
       # Successfully collected resources so start heading towards the target we want to transfer them to
-      unit.memory.target = transferTarget unit
-      target = Game.getObjectById(unit.memory.target)
+      unit.memory.transferTarget = transferTarget unit
+      target = Game.getObjectById(unit.memory.transferTarget)
       if not target?
-        unit.memory.target = undefined
+        unit.memory.transferTarget = undefined
         return
 
   location = pos: target.pos, range: 1
@@ -158,7 +190,6 @@ fortify = (unit) ->
   unit.memory.fortifyTarget or= fortifyTarget unit
   target = Game.getObjectById(unit.memory.fortifyTarget)
   if not target? or not target.room? or target.hits >= target.hitsMax or not unit.store.getFreeCapacity(RESOURCE_ENERGY)
-
     unit.memory.fortifyTarget = fortifyTarget unit
     target = Game.getObjectById(unit.memory.fortifyTarget)
     # Couldn't find a visible target
@@ -394,4 +425,4 @@ module.exports = { upgrade, harvest, transfer, build,
                    repair, fortify, refillTower, shouldWork,
                    moveTo, resupply, collect, claim,
                    reserve, patrol, attack, invade,
-                   defend }
+                   defend, mine }

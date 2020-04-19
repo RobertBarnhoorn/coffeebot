@@ -58,7 +58,7 @@ collectTarget = (unit) ->
                                filter: (r) -> r.amount >= threshold
     containersFound = room.find FIND_STRUCTURES,
                                 filter: (s) -> s.structureType is STRUCTURE_CONTAINER and
-                                               s.store.getUsedCapacity >= threshold
+                                               s.store.getUsedCapacity() >= threshold
     tombsFound = room.find FIND_TOMBSTONES,
                            filter: (t) -> t.store.getUsedCapacity() >= threshold
     ruinsFound = room.find FIND_RUINS,
@@ -155,8 +155,8 @@ repairTarget = (unit) ->
   myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
   for room in myRooms
     structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) => s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
-                                               (if s.my? then s.my else (s.structureType is STRUCTURE_ROAD)) and
+                                filter: (s) -> s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
+                                               (s.my or s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER]) and
                                                s.hits < s.hitsMax
     structures.push(structuresFound...) if structuresFound?
 

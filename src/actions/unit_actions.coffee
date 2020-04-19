@@ -99,7 +99,7 @@ transfer = (unit) ->
   goTo location, unit
 
 collect = (unit) ->
-  threshold = 0.35 * unit.store.getCapacity()
+  threshold = 0.5 * unit.store.getCapacity()
   unit.memory.collectTarget or= collectTarget unit
   target = Game.getObjectById(unit.memory.collectTarget)
   if not target? or target.structureType == STRUCTURE_STORAGE or
@@ -112,16 +112,19 @@ collect = (unit) ->
       return
 
   if unit.pos.inRangeTo(target, 1)
-    result = unit.pickup(target)
-    if result isnt OK
-      result = unit.withdraw(target)
-    if result is OK
-      # Successfully collected resources so start heading towards the target we want to transfer them to
-      unit.memory.transferTarget = transferTarget unit
-      target = Game.getObjectById(unit.memory.transferTarget)
-      if not target?
-        unit.memory.transferTarget = undefined
-        return
+    if not target.store?
+      result = unit.pickup(target)
+    else
+      for type in keys target.store
+        result = unit.withdraw(target, type)
+        if result is OK
+          # Successfully collected resources so start heading towards the target we want to transfer them to
+          unit.memory.transferTarget = transferTarget unit
+          target = Game.getObjectById(unit.memory.transferTarget)
+          if not target?
+            unit.memory.transferTarget = undefined
+            return
+          break
 
   location = pos: target.pos, range: 1
   goTo location, unit
@@ -408,9 +411,9 @@ heal = (unit) ->
   return true
 
 shouldWork = (unit) ->
-  if unit.store.getFreeCapacity() is 0
+  if unit.store.getUsedCapacity() == unit.store.getCapacity()
     true
-  else if unit.store.getFreeCapacity() is unit.store.getCapacity()
+  else if unit.store.getUsedCapacity() == 0
     false
   else
     unit.memory.working

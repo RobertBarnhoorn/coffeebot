@@ -21,7 +21,9 @@ transferTarget = (unit) ->
                                                  s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 and
                                                  s.id != unit.memory.target
       structures.push(structuresFound...) if structuresFound?
-    storage.push(room.storage) if room.storage?
+
+    if room.storage? and room.storage.store.getUsedCapacity() < room.storage.store.getCapacity()
+      storage.push(room.storage)
 
 
   if not structures.length

@@ -8,7 +8,7 @@
 { cpuUsed } = require 'cpu'
 { MYSELF } = require 'constants'
 
-transferTarget = (unit) ->
+transferTarget = (unit, exclude=null) ->
   # Prioritise transferring to either the nearest extension/spawn or the nearest storage, depending on how
   # energy-starved the spawning economy is. If we need energy for spawning it will be prioritized, otherwise
   # the energy may be put into storage for later use
@@ -19,10 +19,12 @@ transferTarget = (unit) ->
       structuresFound = room.find FIND_MY_STRUCTURES,
                                   filter: (s) -> s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
                                                  s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 and
-                                                 s.id != unit.memory.target
+                                                 s.id != exclude
       structures.push(structuresFound...) if structuresFound?
 
-    if room.storage? and room.storage.store.getUsedCapacity() < room.storage.store.getCapacity()
+    if room.storage? and
+       room.storage.store.getUsedCapacity() < room.storage.store.getCapacity() and
+       room.storage.id != exclude
       storage.push(room.storage)
 
 
@@ -215,7 +217,7 @@ resupplyTarget = (unit) ->
     tombsFound = room.find FIND_TOMBSTONES,
                            filter: (t) => t.store[RESOURCE_ENERGY] > unit.store.getCapacity(RESOURCE_ENERGY)
     storesFound = room.find FIND_STRUCTURES,
-                            filter: (s) => (s.structureType is STRUCTURE_CONTAINER or
+                            filter: (s) -> (s.structureType is STRUCTURE_CONTAINER or
                                             s.structureType is STRUCTURE_STORAGE) and \
                                             s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
     resources.push(droppedFound...) if droppedFound?
@@ -234,7 +236,7 @@ refillTarget = (unit) ->
   towers = []
   for room in values rooms
     towersFound = room.find FIND_MY_STRUCTURES,
-                            filter: (s) => s.structureType is STRUCTURE_TOWER and \
+                            filter: (s) -> s.structureType is STRUCTURE_TOWER and \
                                            s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
     towers.push(towersFound...) if towersFound?
 

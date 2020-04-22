@@ -85,15 +85,10 @@ transfer = (unit) ->
       return
 
   if unit.pos.inRangeTo(target, 1)
-    for type in keys unit.store
-      if unit.transfer(target, type) is OK
-        # Successfully transferred resources so start heading towards the next target
-        unit.memory.transferTarget = if unit.store.getUsedCapacity() then transferTarget(unit) else collectTarget(unit)
-        target = Game.getObjectById(unit.memory.transferTarget)
-        if not target?
-          unit.memory.transferTarget = undefined
-          return
-        break
+    if unit.transfer(target, keys(unit.store)[0]) is OK
+      # Successfully transferred resources so start heading towards the next target
+      unit.memory.transferTarget = transferTarget(unit, exclude=unit.memory.transferTarget)
+      target = Game.getObjectById(unit.memory.transferTarget)
 
   location = pos: target.pos, range: 1
   goTo location, unit

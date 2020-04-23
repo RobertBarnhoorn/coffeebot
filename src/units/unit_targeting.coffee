@@ -107,7 +107,8 @@ mineTarget = (unit) ->
   mines = []
   for r in values rooms when r.controller?.my
     minesFound = filter r.find(FIND_MINERALS),
-                        ((m) -> (filter m.pos.findInRange(FIND_STRUCTURES, 0),
+                        ((m) -> m.amount > 0 and
+                                (filter m.pos.findInRange(FIND_STRUCTURES, 0),
                                         ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0 and
                                 not any (m.id is u.memory.target for u in values units))
     mines.push(minesFound...) if minesFound?

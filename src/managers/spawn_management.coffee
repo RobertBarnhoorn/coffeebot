@@ -14,9 +14,10 @@ priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.UPGRADER, roles.BUILDER,
 
 myRooms = filter rooms, ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
 mySources = flatten (s for s in r.find(FIND_SOURCES) for r in myRooms)
-myExtractors = filter rooms, ((r) -> r.controller?.my and
-                             (filter r.find(FIND_MY_STRUCTURES),
-                                    ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0)
+myMines = filter r.find(FIND_MINERALS),
+                 ((m) -> m.amount > 0 and
+                         (filter m.pos.findInRange(FIND_STRUCTURES, 0),
+                                 ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0)
 flagCount = countBy flags, 'color'
 
 desired = (role) ->
@@ -27,7 +28,7 @@ desired = (role) ->
     when roles.BUILDER          then 3
     when roles.REPAIRER         then 3
     when roles.FORTIFIER        then 3
-    when roles.MINER            then 1 * myExtractors.length
+    when roles.MINER            then 1 * myMines.length
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER

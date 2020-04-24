@@ -5,7 +5,6 @@
 { getPath, getClosest } = require 'paths'
 { units } = require 'units'
 { flags, flag_intents } = require 'flags'
-{ cpuUsed } = require 'cpu'
 { MYSELF } = require 'constants'
 
 transferTarget = (unit, exclude=null) ->
@@ -26,7 +25,6 @@ transferTarget = (unit, exclude=null) ->
        room.storage.store.getUsedCapacity() < room.storage.store.getCapacity() and
        room.storage.id != exclude
       storage.push(room.storage)
-
 
   if not structures.length
     if not storage.length
@@ -194,20 +192,33 @@ fortifyTarget = (unit) ->
   return (sample prioritized).id
 
 buildTarget = (unit) ->
+  structures = []
   sites = []
   myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
   for room in myRooms
+    structuresFound = room.find FIND_STRUCTURES,
+                                filter: (s) -> s.hits < s.hitsMax and s.hits < 10000 and
+                                               s.structureType in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
+                                               not any(s.id is u.memory.buildTarget for u in values units)
+
+    structures.push(structuresFound...) if structuresFound?
+
     sitesFound = room.find FIND_MY_CONSTRUCTION_SITES,
-                           filter: (s) => not any(s.id is u.memory.buildTarget for u in values units)
+                           filter: (s) -> not any(s.id is u.memory.buildTarget for u in values units)
     sites.push(sitesFound...) if sitesFound?
 
-  if not sites.length
-    return undefined
+  if not structures.length
+    if not sites.length
+      return undefined
+    closest = getClosest(unit, sites)
+    if closest?
+      return closest.id
+    return (sample sites).id
 
-  closest = getClosest(unit, sites)
+  closest = getClosest(unit, structures)
   if closest?
     return closest.id
-  return (sample sites).id
+  return (sample structures).id
 
 resupplyTarget = (unit) ->
   resources = []

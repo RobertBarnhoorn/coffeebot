@@ -127,14 +127,22 @@ collect = (unit) ->
 build = (unit) ->
   unit.memory.buildTarget or= buildTarget unit
   target = Game.getObjectById(unit.memory.buildTarget)
-  if not target? or not target.room? or not target.progress?
+  if not target? or not target.room?
     unit.memory.buildTarget = buildTarget unit
     target = Game.getObjectById(unit.memory.buildTarget)
     if not target?
       unit.memory.buildTarget = undefined
       return false
+
   # Move to and build the target
-  unit.build target
+  if target.progress?
+    unit.build target
+  else
+    if target.hits < target.hitsMax and target.hits < 10000
+      unit.repair target
+    else
+      unit.memory.buildTarget = undefined
+
   location = pos: target.pos, range: 1
   goTo location, unit
   return true

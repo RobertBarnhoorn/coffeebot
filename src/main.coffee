@@ -5,6 +5,7 @@
 { towerManagement } = require 'tower_management'
 { cpuUsed, cpuBucket } = require 'cpu'
 { readMem, writeMem } = require 'memory'
+{ emitMetrics } = require 'stats'
 
 module.exports.loop = ->
   do garbageCollection
@@ -13,3 +14,4 @@ module.exports.loop = ->
   do flagManagement
   do populationControl
   do unitManagement
+  do emitMetrics

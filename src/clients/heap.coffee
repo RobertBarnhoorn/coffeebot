@@ -1,5 +1,5 @@
 # Various heap statistics for your VM
-_heap = -> Game.cpu.getHeapStatistics()
+_heap = Game.cpu.getHeapStatistics()
 
 totalHeapSize           = _heap['total_heap_size']
 totalHeapSizeExecutable = _heap['total_heap_size_executable']

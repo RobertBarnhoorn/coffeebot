@@ -6,13 +6,13 @@
 _cpu = Game.cpu
 
 # Assigned CPU limit for the current shard
-cpuLimit = _cpu['limit']
+cpuLimit = _cpu.limit
 
 # Available CPU time at the current game tick
-cpuTickLimit = _cpu['tickLimit']
+cpuTickLimit = _cpu.tickLimit
 
 # Unused CPU accumulated in your bucket
-cpuBucket = _cpu['bucket']
+cpuBucket = _cpu.bucket
 
 cpuUsed = -> Game.cpu.getUsed()
 

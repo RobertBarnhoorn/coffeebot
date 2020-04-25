@@ -5,7 +5,8 @@
 _memory    = Memory
 _rawMemory = RawMemory
 
-TOTAL_MEM = 2048  # 2MB
+TOTAL_MEM = 2     # MB
+MB = 1000000      # Bytes in MB
 
 # Read from a memory location
 readMem = (k) -> _memory[k]
@@ -29,8 +30,8 @@ roomsMem = readMem 'rooms'
 memExists = (k) -> (readMem k)?
 
 # How much memory has been used (in Bytes)
-usedMem = _rawMemory.get().length
+memUsed = _rawMemory.get().length
 
 module.exports = { readMem, writeMem, deleteMem,
                    unitsMem, deleteUnitMem, roomsMem,
-                   memExists, usedMem }
+                   memExists, memUsed, TOTAL_MEM, MB}

@@ -1,8 +1,6 @@
 { cpuLimit, cpuTickLimit, cpuBucket, cpuUsed } = require 'cpu'
 { memUsed, TOTAL_MEM, MB } = require 'memory'
 { totalHeapSize, usedHeapSize } = require 'heap'
-{ time } = require 'time'
-{ rooms } = require 'rooms'
 { gclLevel, gclProgress, gclNeeded } = require 'control'
 { gplLevel, gplProgress, gplNeeded } = require 'power'
 
@@ -12,8 +10,7 @@
 emitMetrics = ->
   Memory.stats =
     # Time
-    time:           time
-    # Rooms
+    time:           Game.time
     # CPU
     cpu_used:       cpuUsed()
     cpu_limit:      cpuLimit

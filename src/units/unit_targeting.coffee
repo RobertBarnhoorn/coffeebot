@@ -160,7 +160,8 @@ repairTarget = (unit) ->
     structuresFound = room.find FIND_STRUCTURES,
                                 filter: (s) -> s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
                                                (s.my or s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER]) and
-                                               s.hits < s.hitsMax
+                                               s.hits < s.hitsMax and
+                                               not any(s.id is u.memory.repairTarget for u in values units)
     structures.push(structuresFound...) if structuresFound?
 
   if not structures.length
@@ -176,11 +177,11 @@ fortifyTarget = (unit) ->
   myRooms = filter values(rooms), ((r) -> r.controller?.my)
   for room in myRooms
     structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) => s.hits < s.hitsMax and
+                                filter: (s) -> s.hits < s.hitsMax and
                                                s.structureType in [STRUCTURE_WALL, STRUCTURE_RAMPART]
     structures.push(structuresFound...) if structuresFound?
 
-  prioritized = structures.sort((a, b) => (a.hits - b.hits)) \
+  prioritized = structures.sort((a, b) -> (a.hits - b.hits)) \
                           .slice(0, Math.ceil(Math.sqrt(structures.length)))
 
   if not prioritized.length

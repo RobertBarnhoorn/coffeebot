@@ -176,7 +176,7 @@ repair = (unit) ->
   # If we've already finished repairing it, choose another target
   unit.memory.repairTarget or= repairTarget unit
   target = Game.getObjectById(unit.memory.repairTarget)
-  if not target? or not target.room? or target.hits >= target.hitsMax or not unit.store.getFreeCapacity(RESOURCE_ENERGY)
+  if not target? or not target.room? or target.hits >= target.hitsMax
     unit.memory.repairTarget = repairTarget unit
     target = Game.getObjectById(unit.memory.repairTarget)
     # Couldn't find a visible target
@@ -195,7 +195,7 @@ fortify = (unit) ->
   # If we've already finished fortifying it, choose another target
   unit.memory.fortifyTarget or= fortifyTarget unit
   target = Game.getObjectById(unit.memory.fortifyTarget)
-  if not target? or not target.room? or target.hits >= target.hitsMax or not unit.store.getFreeCapacity(RESOURCE_ENERGY)
+  if not target? or not target.room? or target.hits >= target.hitsMax
     unit.memory.fortifyTarget = fortifyTarget unit
     target = Game.getObjectById(unit.memory.fortifyTarget)
     # Couldn't find a visible target

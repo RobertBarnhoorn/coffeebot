@@ -27,22 +27,28 @@ harvest = (unit) ->
     return
 
   if unit.memory.inPosition
+    if unit.memory.container?
+      container = Game.getObjectById unit.memory.container
+      if container.store.getUsedCapacity() < container.store.getCapacity()
+        unit.harvest target
+      return
     unit.harvest target
+    return
+
+  # If there is a container by the source, sit on top of it, else sit next to the source
+  containers = filter target.pos.findInRange(FIND_STRUCTURES, 1),
+                      ((s) -> s.structureType is STRUCTURE_CONTAINER)
+  if containers.length
+    unit.memory.container = containers[0].id
+    location = pos: containers[0].pos, range: 0
   else
-    containers = filter target.pos.findInRange(FIND_STRUCTURES, 1),
-                        (s) -> s.structureType is STRUCTURE_CONTAINER
+    location = pos: target.pos, range: 1
 
-    # If there is a container by the source, sit on top of it, else sit next to the source
-    if containers.length
-      location = pos: containers[0].pos, range: 0
-    else
-      location = pos: target.pos, range: 1
-
-    # Once we reach the target location we only have to harvest
-    if unit.pos.inRangeTo(location.pos, location.range)
-      unit.memory.inPosition = true
-    else
-      goTo location, unit
+  # Once we reach the target location we only have to harvest
+  if unit.pos.inRangeTo(location.pos, location.range)
+    unit.memory.inPosition = true
+  else
+    goTo location, unit
 
 mine = (unit) ->
   unit.memory.target or= mineTarget unit
@@ -55,22 +61,29 @@ mine = (unit) ->
     return
 
   if unit.memory.inPosition
+    if unit.memory.container?
+      container = Game.getObjectById unit.memory.container
+      if container.store.getUsedCapacity() < container.store.getCapacity()
+        unit.harvest target
+      return
     unit.harvest target
+    return
+
+  containers = filter target.pos.findInRange(FIND_STRUCTURES, 1),
+                      (s) -> s.structureType is STRUCTURE_CONTAINER
+
+  # If there is a container by the extractor, sit on top of it, else sit next to the source
+  if containers.length
+    location = pos: containers[0].pos, range: 0
+    unit.memory.container = containers[0].id
   else
-    containers = filter target.pos.findInRange(FIND_STRUCTURES, 1),
-                        (s) -> s.structureType is STRUCTURE_CONTAINER
+    location = pos: target.pos, range: 1
 
-    # If there is a container by the extractor, sit on top of it, else sit next to the source
-    if containers.length
-      location = pos: containers[0].pos, range: 0
-    else
-      location = pos: target.pos, range: 1
-
-    # Once we reach the target location we only have to harvest
-    if unit.pos.inRangeTo(location.pos, location.range)
-      unit.memory.inPosition = true
-    else
-      goTo location, unit
+  # Once we reach the target location we only have to harvest
+  if unit.pos.inRangeTo(location.pos, location.range)
+    unit.memory.inPosition = true
+  else
+    goTo location, unit
 
 transfer = (unit) ->
   unit.memory.transferTarget or= transferTarget unit

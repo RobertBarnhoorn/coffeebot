@@ -7,6 +7,7 @@
 { rooms } = require 'rooms'
 { generateUnit } = require 'spawn_behaviours'
 { MYSELF } = require 'constants'
+{ constructionSites, mines } = require 'unit_targeting'
 
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.UPGRADER, roles.BUILDER, roles.REPAIRER,
               roles.FORTIFIER, roles.MINER, roles.RESERVER, roles.CLAIMER, roles.SOLDIER,
@@ -20,20 +21,20 @@ flagCount = countBy flags, 'color'
 desired = (role) ->
   switch role
     when roles.HARVESTER        then 1 * mySources.length
-    when roles.TRANSPORTER      then 1 * myRooms.length
-    when roles.UPGRADER         then 1 * myControlledRooms.length
-    when roles.BUILDER          then 2
-    when roles.REPAIRER         then 1 * myControlledRooms.length
-    when roles.FORTIFIER        then 1 * myControlledRooms.length
-    when roles.MINER            then 1
+    when roles.TRANSPORTER      then 1 * mySources.length
+    when roles.UPGRADER         then 1 * myRooms.length
+    when roles.BUILDER          then (if constructionSites.length then 3 else 0)
+    when roles.REPAIRER         then 2 * myControlledRooms.length
+    when roles.FORTIFIER        then 2 * myControlledRooms.length
+    when roles.MINER            then 1 * mines.length
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]
     when roles.CLAIMER
       flagCount[flag_intents.CLAIM]
     when roles.SOLDIER
-      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 4
+      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 3 or flagCount[flag_intents.INVADE] * 4
     when roles.SNIPER
-      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 2 or flagCount[flag_intents.INVADE] * 2
+      flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 3 or flagCount[flag_intents.INVADE] * 2
     when roles.MEDIC
       flagCount[flag_intents.ATTACK] * 4 or flagCount[flag_intents.DEFEND] * 0 or flagCount[flag_intents.INVADE] * 4
 

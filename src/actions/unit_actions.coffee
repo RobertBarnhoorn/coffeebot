@@ -29,7 +29,7 @@ harvest = (unit) ->
   if unit.memory.inPosition
     if unit.memory.container?
       container = Game.getObjectById unit.memory.container
-      if container.store.getUsedCapacity() < container.store.getCapacity()
+      if container? and container.store.getUsedCapacity() < container.store.getCapacity()
         unit.harvest target
       return
     unit.harvest target
@@ -88,54 +88,63 @@ mine = (unit) ->
 transfer = (unit) ->
   unit.memory.transferTarget or= transferTarget unit
   target = Game.getObjectById(unit.memory.transferTarget)
-  if not target? or not target.store? or target.store.getUsedCapacity() == target.store.getCapacity()
-    unit.memory.transferTarget = transferTarget(unit, exclude=unit.memory.exclude)
-    target = Game.getObjectById(unit.memory.transferTarget)
-    if not target?
-      return
 
-  if unit.pos.inRangeTo(target, 1)
-    type = keys(unit.store)[0]
-    if unit.transfer(target, type) is OK
-      # Successfully transferred resources so start heading towards the next target
-      if target.structureType is STRUCTURE_STORAGE and type is RESOURCE_ENERGY
-        unit.memory.exclude = target.id
-      unit.memory.transferTarget = transferTarget(unit, exclude=unit.memory.exclude)
-      target = Game.getObjectById(unit.memory.transferTarget)
+  if not target? or not target.store? or target.store.getUsedCapacity() == target.store.getCapacity()
+    unit.memory.transferTarget = transferTarget unit
+    target = Game.getObjectById(unit.memory.transferTarget)
+
+  if not target?
+    return
 
   location = pos: target.pos, range: 1
   goTo location, unit
 
+  if unit.pos.inRangeTo(target, 1)
+    type = keys(unit.store)[0]
+    if unit.transfer(target, type) is OK
+      unit.memory.transferTarget = undefined
+      return
+      # Successfully transferred resources so start heading towards the next target
+#     unit.memory.transferTarget = transferTarget unit
+#     target = Game.getObjectById(unit.memory.transferTarget)
+
+
 collect = (unit) ->
-  threshold = 0.5 * unit.store.getCapacity()
   unit.memory.collectTarget or= collectTarget unit
   target = Game.getObjectById(unit.memory.collectTarget)
-  if not target? or target.structureType == STRUCTURE_STORAGE or
-        (target.amount? and target.amount < threshold) or
-        (target.store? and target.store.getUsedCapacity() < threshold)
+
+  if not target? or (target.amount? and target.amount < 50) or (target.store? and target.store.getUsedCapacity() < 50)
     unit.memory.collectTarget = collectTarget unit
     target = Game.getObjectById(unit.memory.collectTarget)
-    if not target?
-      unit.memory.collectTarget = undefined
-      return
+
+  if not target?
+    unit.memory.collectTarget = undefined
+    return
+
+  location = pos: target.pos, range: 1
+  goTo location, unit
 
   if unit.pos.inRangeTo(target, 1)
     if not target.store?
       result = unit.pickup(target)
     else
       type = keys(target.store)[0]
-      if unit.withdraw(target, type) is OK
-        # Successfully collected resources so start heading towards the target we want to transfer them to
-        unit.memory.transferTarget = transferTarget unit, exclude=unit.memory.exclude
-        target = Game.getObjectById(unit.memory.transferTarget)
-        if not target?
-          unit.memory.transferTarget = undefined
-          return
-
-  location = pos: target.pos, range: 1
-  goTo location, unit
+      result = unit.withdraw(target, type)
+    if result is OK
+      # Successfully collected resources so start heading towards the target we want to transfer them to
+      unit.memory.collectTarget = undefined
+      return
+#     unit.memory.transferTarget = transferTarget unit
+#     target = Game.getObjectById(unit.memory.transferTarget)
+#     if not target?
+#       return
 
 build = (unit) ->
+  if unit.memory.resupplyTarget?
+    unit.memory.resupplyTarget = undefined
+    unit.memory.buildTarget = buildTarget unit
+    target = Game.getObjectById(unit.memory.buildTarget)
+
   unit.memory.buildTarget or= buildTarget unit
   target = Game.getObjectById(unit.memory.buildTarget)
   if not target? or not target.room?
@@ -158,44 +167,25 @@ build = (unit) ->
   goTo location, unit
   return true
 
-resupply = (unit) ->
-  # If we have an existing target we should go there
-  # If the target no longer exists, find a new one
-  # If we've already finished resupplying, choose another target
-  unit.memory.resupplyTarget or= resupplyTarget unit
-  unitCapacity = unit.store.getCapacity(RESOURCE_ENERGY)
-  target = Game.getObjectById(unit.memory.resupplyTarget)
-  if not target? or (target.store? and target.store[RESOURCE_ENERGY] < unitCapacity) or \
-                    (target.amount? and target.amount < unitCapacity)
-    unit.memory.resupplyTarget = resupplyTarget unit
-    target = Game.getObjectById(unit.memory.resupplyTarget)
-    # Couldn't find a target
-    if not target?
-      unit.memory.resupplyTarget = undefined
-      return false
-  # Move to target resources and use them to resupply
-  if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
-    # We've successfully resupplied, so get back to work
-    unit.memory.resupplyTarget = undefined
-  else
-    location = pos: target.pos, range: 1
-    goTo location, unit
-
 repair = (unit) ->
   # If we have an existing target we should try to repair it
   # If the target no longer exists, find a new one
   # If we've already finished repairing it, choose another target
-  unit.memory.repairTarget or= repairTarget unit
-  target = Game.getObjectById(unit.memory.repairTarget)
-  if not target? or not target.room? or target.hits >= target.hitsMax or not unit.store.getFreeCapacity(RESOURCE_ENERGY)
+  if unit.memory.resupplyTarget?
+    unit.memory.resupplyTarget = undefined
     unit.memory.repairTarget = repairTarget unit
     target = Game.getObjectById(unit.memory.repairTarget)
-    # Couldn't find a visible target
-    if not target? or not target.room?
-      unit.memory.repairTarget = undefined
-      return false
+
+  unit.memory.repairTarget or= repairTarget unit
+  target = Game.getObjectById(unit.memory.repairTarget)
+  if not target? or not target.room? or target.hits >= target.hitsMax
+    unit.memory.repairTarget = repairTarget unit
+    target = Game.getObjectById(unit.memory.repairTarget)
+  # Couldn't find a visible target
+  if not target? or not target.room?
+    return false
   # Move to and repair the target
-  unit.repair(target)
+  unit.repair target
   location = pos: target.pos, range: 1
   goTo location, unit
   return true
@@ -204,11 +194,16 @@ fortify = (unit) ->
   # If we have an existing target we should try to fortify it
   # If the target no longer exists, find a new one
   # If we've already finished fortifying it, choose another target
-  unit.memory.fortifyTarget or= fortifyTarget unit
-  target = Game.getObjectById(unit.memory.fortifyTarget)
-  if not target? or not target.room? or target.hits >= target.hitsMax or not unit.store.getFreeCapacity(RESOURCE_ENERGY)
+  if unit.memory.resupplyTarget?
+    unit.memory.resupplyTarget = undefined
     unit.memory.fortifyTarget = fortifyTarget unit
-    target = Game.getObjectById(unit.memory.fortifyTarget)
+    target = Game.getObjectById unit.memory.fortifyTarget
+
+  unit.memory.fortifyTarget or= fortifyTarget unit
+  target = Game.getObjectById unit.memory.fortifyTarget
+  if not target? or not target.room? or target.hits >= target.hitsMax
+    unit.memory.fortifyTarget = fortifyTarget unit
+    target = Game.getObjectById unit.memory.fortifyTarget
     # Couldn't find a visible target
     if not target? or not target.room?
       unit.memory.fortifyTarget = undefined
@@ -225,13 +220,33 @@ refillTower = (unit) ->
   if not target? or target.store[RESOURCE_ENERGY] >= target.store.getCapacity(RESOURCE_ENERGY)
     unit.memory.refillTarget = refillTarget unit
     target = Game.getObjectById(unit.memory.refillTarget)
-    if not target?
-      unit.memory.refillTarget = undefined
-      return false
+  if not target?
+    return false
   if unit.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE
     location = pos: target.pos, range: 1
     goTo location, unit
   return true
+
+resupply = (unit) ->
+  # If we have an existing target we should go there
+  # If the target no longer exists, find a new one
+  # If we've already finished resupplying, choose another target
+  unit.memory.resupplyTarget or= resupplyTarget unit
+  target = Game.getObjectById(unit.memory.resupplyTarget)
+  if not target? or not target.store? or not target.amount?
+    unit.memory.resupplyTarget = resupplyTarget unit
+    target = Game.getObjectById(unit.memory.resupplyTarget)
+
+  # Couldn't find a target
+  if not target?
+    return false
+
+  # Move to target resources and use them to resupply
+  if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK
+    return true
+  else
+    location = pos: target.pos, range: 1
+    goTo location, unit
 
 reserve = (unit) ->
   unit.memory.target or= reserveTarget unit

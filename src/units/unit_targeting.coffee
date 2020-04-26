@@ -1,4 +1,4 @@
-{ any, filter, flatten, forEach, keys, map, random, sample, shuffle, values } = require 'lodash'
+{ any, filter, flatten, forEach, keys, map, random, sample, shuffle, slice, sortBy, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -7,77 +7,90 @@
 { flags, flag_intents } = require 'flags'
 { MYSELF } = require 'constants'
 
-myStructures = flatten map rooms, (r) -> r.find(FIND_MY_STRUCTURES)
-transferStructures = filter myStructures, (s) -> s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
-                                                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-transferStorage = filter(map(rooms, ((r) -> r.storage)),
-                        ((s) -> s? and s.store.getUsedCapacity() < s.store.getCapacity()))
+myRooms = filter rooms, (r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF
 
-transferTarget = (unit, exclude=null) ->
+myControlledRooms = filter rooms, (r) -> r.controller?.my
+
+myStructures = flatten map rooms, (r) -> r.find(FIND_MY_STRUCTURES)
+
+energyStructures = filter myStructures, (s) -> s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN]
+
+storage = filter myStructures, (s) -> s.structureType is STRUCTURE_STORAGE
+
+mines = filter flatten(map(myControlledRooms, ((r) -> r.find(FIND_MINERALS)))),
+               (m) -> m.mineralAmount > 0 and (filter m.pos.findInRange(FIND_STRUCTURES, 0),
+                                                      ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0
+
+damagedStructures = filter flatten(map(myRooms, ((r) -> r.find FIND_STRUCTURES))),
+                           (s) -> s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
+                                  s.hits < s.hitsMax and
+                                  (s.my or s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER])
+  
+constructionSites = flatten map myRooms, (r) -> r.find FIND_MY_CONSTRUCTION_SITES
+
+damagedDefences = filter flatten(map(myControlledRooms, ((r) -> r.find FIND_STRUCTURES))),
+                         (s) -> s.hits < s.hitsMax and
+                                s.structureType in [STRUCTURE_WALL, STRUCTURE_RAMPART]
+
+lowestDefences = damagedDefences.sort((a, b) -> (a.hits - b.hits)).slice(0, Math.ceil(Math.sqrt(damagedDefences.length)))
+
+resources = flatten map rooms, (r) -> r.find(FIND_DROPPED_RESOURCES)
+
+tombs = flatten map myRooms, (r) -> r.find FIND_TOMBSTONES
+
+ruins = flatten map myRooms, (r) -> r.find FIND_RUINS
+
+containers = filter flatten(map(myRooms, ((r) -> r.find(FIND_STRUCTURES)))),
+                    (s) -> s.structureType is STRUCTURE_CONTAINER
+
+nonFullTowers = filter myStructures, (s) -> s.structureType is STRUCTURE_TOWER and
+                                            s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
+
+collectables = [resources..., tombs..., ruins..., containers...]
+
+resupplyPoints = [collectables..., storage...]
+
+transferTarget = (unit) ->
   # Prioritise transferring to either the nearest extension/spawn or the nearest storage, depending on how
   # energy-starved the spawning economy is. If we need energy for spawning it will be prioritized, otherwise
   # the energy may be put into storage for later use
-  structures = []
-  storage = []
+  candidateStructures = []
+
   if unit.store[RESOURCE_ENERGY] > 0
-    structures = filter transferStructures, (s) -> s.id != exclude
-  storage = filter transferStorage, (s) -> s.id != exclude
+    candidateStructures = filter energyStructures, (s) -> s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
 
-  if not structures.length
-    if not storage.length
-      return undefined
-    closest = getClosest unit, storage
-    if closest?
-      return closest.id
+  candidateStorage = filter storage, (s) -> s.store.getUsedCapacity() < s.store.getCapacity()
+  candidates = [candidateStructures..., candidateStorage...]
 
-  closestStructure = getClosest unit, structures
-  closestStorage = getClosest unit, storage
-  if not closestStructure?
-    if not closestStorage?
-      return undefined
-    return closestStorage.id
+  if not candidates.length
+    return undefined
 
-  closestStructure.cost = 1 if closestStructure.cost == 0
-  closestStorage.cost = 1 if closestStorage.cost == 0
-
-  normalisedDemand = structures.length / storage.length
-  normalisedCost = closestStructure.cost / closestStorage.cost
-  priority = normalisedDemand / normalisedCost
-  # Arbitrary threshold chosen by trial-and-error
-  if priority > 5
-    return closestStructure.id
-  else
-    return closestStorage.id
-
-collectTarget = (unit) ->
-  resources = []
-  threshold = 0.7 * unit.store.getCapacity()
-  for room in values rooms
-    resourcesFound = room.find FIND_DROPPED_RESOURCES,
-                               filter: (r) -> r.amount >= threshold
-    containersFound = room.find FIND_STRUCTURES,
-                                filter: (s) -> s.structureType is STRUCTURE_CONTAINER and
-                                               s.store.getUsedCapacity() >= threshold
-    tombsFound = room.find FIND_TOMBSTONES,
-                           filter: (t) -> t.store.getUsedCapacity() >= threshold
-    ruinsFound = room.find FIND_RUINS,
-                           filter: (r) -> r.store.getUsedCapacity() >= threshold
-    resources.push(resourcesFound...) if resourcesFound?
-    resources.push(containersFound...) if containersFound?
-    resources.push(tombsFound...) if tombsFound?
-    resources.push(ruinsFound...) if ruinsFound?
-
-  closest = getClosest unit, resources
+  closest = getClosest unit, candidates
   if closest?
     return closest.id
-  return (sample resources).id
+  return (sample candidates).id
+
+collectTarget = (unit) ->
+  threshold = 100
+  candidates = filter collectables, (c) -> (if c.amount? then c.amount > threshold else c.store.getUsedCapacity() > threshold)
+
+  if not candidates.length
+    return undefined
+
+  closest = getClosest unit, candidates
+  if closest?
+    return closest.id
+  return (sample candidates).id
 
 upgradeTarget = (unit) ->
-  rooms = (r for r in values rooms when r.controller?.my and not r.controller.reservation?)
-  controllers = map rooms, ((r) -> r.controller)
-  numUpgraders = (c) -> (u for u in values units when u.memory.target is c.id ).length
+  controllers = map myControlledRooms, (r) -> r.controller
+  numUpgraders = (c) -> (u for u in values(units) when u.memory.target is c.id).length
   undersaturated = controllers.sort((c1, c2) -> (numUpgraders c1) - (numUpgraders c2)) \
                               .slice(0, Math.ceil(Math.sqrt(controllers.length)))
+
+  if not undersaturated.length
+    return undefined
+
   closest = getClosest unit, undersaturated
   if closest?
     return closest.id
@@ -99,25 +112,18 @@ harvestTarget = (unit) ->
   return (sample sources).id
 
 mineTarget = (unit) ->
-  mines = []
-  for r in values rooms when r.controller?.my
-    minesFound = filter r.find(FIND_MINERALS),
-                        ((m) -> m.amount > 0 and
-                                (filter m.pos.findInRange(FIND_STRUCTURES, 0),
-                                        ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0 and
-                                not any (m.id is u.memory.target for u in values units))
-    mines.push(minesFound...) if minesFound?
+  candidates = filter mines, (m) -> not any (m.id is u.memory.target for u in values(units) when u.memory.role is roles.MINER)
 
-  if not mines.length
+  if not candidates.length
     return undefined
 
-  closest = getClosest(unit, mines)
+  closest = getClosest(unit, candidates)
   if closest?
     return closest.id
-  return (sample mines).id
+  return (sample candidates).id
 
 flagTarget = (unit, flag_intent, exclude=null) ->
-  targets = filter flags, ((f) => f.color is flag_intent and f.name != exclude)
+  targets = filter flags, ((f) -> f.color is flag_intent and f.name != exclude)
 
   if not targets.length
     return undefined
@@ -129,7 +135,7 @@ flagTarget = (unit, flag_intent, exclude=null) ->
 
 reserveTarget = (unit) ->
   targets = filter flags, ((f) -> f.color is flag_intents.RESERVE and
-                                  not any (f.name is u.memory.target for u in values units))
+                                  not any (f.name is u.memory.target for u in values(units) when u.memory.role is roles.RESERVER))
 
   if not targets.length
     return undefined
@@ -151,120 +157,70 @@ claimTarget = (unit) ->
   return (sample targets).name
 
 repairTarget = (unit) ->
-  structures = []
-  myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
-  for room in myRooms
-    structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) -> s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
-                                               (s.my or s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER]) and
-                                               s.hits < s.hitsMax and
-                                               not any(s.id is u.memory.repairTarget for u in values units)
-    structures.push(structuresFound...) if structuresFound?
+  candidates = damagedStructures
 
-  if not structures.length
+  if not candidates.length
     return undefined
 
-  closest = getClosest(unit, structures)
+  closest = getClosest(unit, candidates)
   if closest?
     return closest.id
-  return (sample structures).d
+  return (sample candidates).d
 
 fortifyTarget = (unit) ->
-  structures = []
-  myRooms = filter values(rooms), ((r) -> r.controller?.my)
-  for room in myRooms
-    structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) -> s.hits < s.hitsMax and
-                                               s.structureType in [STRUCTURE_WALL, STRUCTURE_RAMPART]
-    structures.push(structuresFound...) if structuresFound?
+  candidates = lowestDefences
 
-  prioritized = structures.sort((a, b) -> (a.hits - b.hits)) \
-                          .slice(0, Math.ceil(Math.sqrt(structures.length)))
-
-  if not prioritized.length
+  if not candidates.length
     return undefined
 
-  closet = getClosest(unit, prioritized)
+  closet = getClosest(unit, candidates)
   if closest?
     return closest.id
-  return (sample prioritized).id
+  return (sample candidates).id
 
 buildTarget = (unit) ->
-  structures = []
-  sites = []
-  myRooms = filter values(rooms), ((r) -> r.controller?.my or r.controller?.reservation?.username is MYSELF)
-  for room in myRooms
-    structuresFound = room.find FIND_STRUCTURES,
-                                filter: (s) -> s.hits < s.hitsMax and s.hits < 10000 and
-                                               s.structureType in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
-                                               not any(s.id is u.memory.buildTarget for u in values units)
-
-    structures.push(structuresFound...) if structuresFound?
-
-    sitesFound = room.find FIND_MY_CONSTRUCTION_SITES,
-                           filter: (s) -> not any(s.id is u.memory.buildTarget for u in values units)
-    sites.push(sitesFound...) if sitesFound?
-
-  if not structures.length
-    if not sites.length
-      return undefined
-    closest = getClosest(unit, sites)
-    if closest?
-      return closest.id
-    return (sample sites).id
-
-  closest = getClosest(unit, structures)
+  if not constructionSites.length
+    return undefined
+  closest = getClosest(unit, constructionSites)
   if closest?
     return closest.id
-  return (sample structures).id
+  return (sample constructionSites).id
 
 resupplyTarget = (unit) ->
-  resources = []
-  for room in values rooms
-    droppedFound = room.find FIND_DROPPED_RESOURCES,
-                             filter: (r) => r.amount >= unit.store.getCapacity(RESOURCE_ENERGY) and \
-                                            r.resourceType is RESOURCE_ENERGY
-    tombsFound = room.find FIND_TOMBSTONES,
-                           filter: (t) => t.store[RESOURCE_ENERGY] > unit.store.getCapacity(RESOURCE_ENERGY)
-    storesFound = room.find FIND_STRUCTURES,
-                            filter: (s) -> (s.structureType is STRUCTURE_CONTAINER or
-                                            s.structureType is STRUCTURE_STORAGE) and \
-                                            s.store[RESOURCE_ENERGY] >= unit.store.getCapacity(RESOURCE_ENERGY)
-    resources.push(droppedFound...) if droppedFound?
-    resources.push(storesFound...) if storesFound?
-    resources.push(tombsFound...) if tombsFound?
+  threshold = 100
 
-  if not resources.length
+  if resupplyPoints.length == 0
     return undefined
 
-  closest = getClosest(unit, resources)
+  candidates = filter resupplyPoints, ((r) -> (if r.amount? then r.amount > threshold else r.store[RESOURCE_ENERGY] > threshold))
+
+  if not candidates.length
+    return undefined
+
+  closest = getClosest(unit, candidates)
   if closest?
     return closest.id
-  return (sample resources).id
+  return (sample candidates).id
 
 refillTarget = (unit) ->
-  towers = []
-  for room in values rooms
-    towersFound = room.find FIND_MY_STRUCTURES,
-                            filter: (s) -> s.structureType is STRUCTURE_TOWER and \
-                                           s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
-    towers.push(towersFound...) if towersFound?
+  candidates = filter nonFullTowers, (t) -> not any(t.id is u.memory.refillTarget for u in values units)
 
-  if not towers.length
+  if not candidates.length
     return undefined
-  closest = getClosest(unit, towers)
+
+  closest = getClosest(unit, candidates)
   if closest?
     return closest.id
-  return (sample towers).id
+  return (sample candidates).id
 
 healTarget = (unit) ->
   targets = unit.room.find FIND_MY_CREEPS
   injured = filter targets, ((u) -> u.hits < u.hitsMax)
   if injured.length
-    return injured.sort((a, b) => a.hits - b.hits)[0].id
+    return injured.sort((a, b) -> a.hits - b.hits)[0].id
   return undefined
 
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    fortifyTarget, buildTarget, collectTarget, transferTarget,
                    flagTarget, claimTarget, resupplyTarget, refillTarget,
-                   healTarget, mineTarget }
+                   healTarget, mineTarget, constructionSites, mines }

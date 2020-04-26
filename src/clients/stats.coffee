@@ -1,8 +1,11 @@
+{ forEach } = require 'lodash'
 { cpuLimit, cpuTickLimit, cpuBucket, cpuUsed } = require 'cpu'
 { memUsed, TOTAL_MEM, MB } = require 'memory'
 { totalHeapSize, usedHeapSize } = require 'heap'
 { gclLevel, gclProgress, gclNeeded } = require 'control'
 { gplLevel, gplProgress, gplNeeded } = require 'power'
+{ roleUsage } = require 'unit_management'
+{ roles } = require 'unit_roles'
 
 # Write metrics to a specific memory location each tick.
 # An external worker reads them occasionally and forwards
@@ -30,5 +33,8 @@ emitMetrics = ->
     gpl_level:      gplLevel
     gpl_progress:   gplProgress
     gpl_needed:     gplNeeded
+    
+  # Units
+  forEach roles, (r) -> Memory.stats['role_' + r + '_cpu'] = roleUsage[r]
 
 module.exports = { emitMetrics }

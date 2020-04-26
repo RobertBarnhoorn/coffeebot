@@ -1,4 +1,4 @@
-{ find, filter, forEach, last, map } = require 'lodash'
+{ dropWhile, find, filter, forEach, last, map } = require 'lodash'
 { rooms } = require 'rooms'
 { roomsMem} = require 'memory'
 
@@ -17,14 +17,19 @@ goTo = (location, unit) ->
 
   prevLoc = unit.memory.prevLoc ? {x: unit.pos.x, y: unit.pos.y}
   prevPrevLoc = unit.memory.prevPrevLoc ? {x: unit.pos.x, y: unit.pos.y}
-
+  prevDest = unit.memory.prevDest ? {x: location.pos.x, y: location.pos.y, range: location.range}
   pathChanged = false
 
-  # If the target destination has changed we need to recalculate the path
-  prevDest = unit.memory.prevDest ? {x: location.pos.x, y: location.pos.y, range: location.range}
+  # If the target destination has changed we need to determine the new path
   if prevDest.x isnt location.pos.x or prevDest.y isnt location.pos.y or prevDest.range isnt location.range
-    path = getPath(unit.pos, location).path
-    pathChanged = true
+    # Check if the path from this position is cached from another calculation
+    hash = serializeRoomPos(unit.pos)
+    path = global.paths[hash]
+    global.paths[hash] = null
+    if not path?
+      pathChanged = true
+      path = getPath(unit.pos, location).path
+
   # If the unit is stuck we need to help it dodge the obstacle
   else if unit.pos.isEqualTo prevPrevLoc.x, prevPrevLoc.y
     avoid = filter unit.pos.findInRange(FIND_CREEPS, 1), ((u) -> u != unit)
@@ -32,8 +37,8 @@ goTo = (location, unit) ->
     pathChanged = true
 
   # See if the path is cached in the global object
-  path or= global.paths[unit.name]
-  # See if the path is cached in memory and deserialize it
+  path or= global.paths[unit.id]
+  # See if the path is serialized in memory and deserialize it
   path or= deserializePath unit.memory.path
 
   # The path is not cached at all so calculate it and cache it
@@ -41,11 +46,12 @@ goTo = (location, unit) ->
     path = getPath(unit.pos, location).path
     pathChanged = true
 
+  # Make sure the path starts at the current position
   moveBy path, unit
 
   # Cache the new path
+  global.paths[unit.id] = path
   if pathChanged
-    global.paths[unit.name] = path
     unit.memory.path = serializePath path
 
   # Store relevant coordinates for next tick
@@ -59,9 +65,13 @@ moveBy = (path, unit) ->
 
 # Find the closest of a list of targets by path
 getClosest = (entity, targets) ->
-  closest = undefined
+  # Initialise the paths object if a global reset has occurred
+  if not global.paths?
+    global.paths = {}
+
+  closest = null
   locations = map targets, ((t) -> pos: t.pos, range: 1)
-  path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 1000000
+  path = PathFinder.search entity.pos, locations, plainCost: 2, swampCost: 10, roomCallback: getCostMatrix, maxOps: 100000, maxRooms: 64
   if path.path.length
     # Our destination is the last position of the path
     destination = last(path.path)
@@ -71,18 +81,21 @@ getClosest = (entity, targets) ->
 
   target = find targets, ((t) -> t.pos.inRangeTo(destination, 1))
   if not target?
-    return undefined
+    return null
 
-  closest = obj: target, id: target.id, name: target.name, cost: path.cost, path: path.path
+  global.paths[serializeRoomPos(entity.pos)] = path.path
+  closest = id: target.id, name: target.name, cost: path.cost
   return closest
 
 # Find the optimal path from pos to loc, potentially across multiple rooms
 # If loc is an array of locations find the path to closest loc
 getPath = (pos, loc, avoid=null) ->
-  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: ((roomName) -> getCostMatrix(roomName, avoid)), maxOps: 1000000
+  PathFinder.search pos, loc, plainCost: 2, swampCost: 10, roomCallback: ((roomName) -> getCostMatrix(roomName, avoid)), maxOps: 100000, maxRooms: 64
+
+serializeRoomPos = (pos) ->
+  pos.x + ',' + pos.y + ',' + pos.roomName
 
 serializePath = (path) ->
-  serializeRoomPos = (pos) -> pos.x + ',' + pos.y + ',' + pos.roomName
   serialized = ''
   forEach path, (p) ->
     serialized += (serializeRoomPos(p) + ' ')

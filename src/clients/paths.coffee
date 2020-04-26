@@ -73,7 +73,7 @@ getClosest = (entity, targets) ->
   if not target?
     return undefined
 
-  closest = id: target.id, name: target.name, cost: path.cost
+  closest = obj: target, id: target.id, name: target.name, cost: path.cost, path: path.path
   return closest
 
 # Find the optimal path from pos to loc, potentially across multiple rooms

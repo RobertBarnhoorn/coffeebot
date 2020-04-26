@@ -1,4 +1,4 @@
-{ any, filter, keys, map, random, sample, shuffle, values } = require 'lodash'
+{ any, filter, flatten, forEach, keys, map, random, sample, shuffle, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -7,29 +7,26 @@
 { flags, flag_intents } = require 'flags'
 { MYSELF } = require 'constants'
 
+myStructures = flatten map rooms, (r) -> r.find(FIND_MY_STRUCTURES)
+transferStructures = filter myStructures, (s) -> s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
+                                                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+transferStorage = filter(map(rooms, ((r) -> r.storage)),
+                        ((s) -> s? and s.store.getUsedCapacity() < s.store.getCapacity()))
+
 transferTarget = (unit, exclude=null) ->
   # Prioritise transferring to either the nearest extension/spawn or the nearest storage, depending on how
   # energy-starved the spawning economy is. If we need energy for spawning it will be prioritized, otherwise
   # the energy may be put into storage for later use
   structures = []
   storage = []
-  for room in values rooms
-    if unit.store[RESOURCE_ENERGY] > 0
-      structuresFound = room.find FIND_MY_STRUCTURES,
-                                  filter: (s) -> s.structureType in [STRUCTURE_EXTENSION, STRUCTURE_SPAWN] and
-                                                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 and
-                                                 s.id != exclude
-      structures.push(structuresFound...) if structuresFound?
-
-    if room.storage? and
-       room.storage.store.getUsedCapacity() < room.storage.store.getCapacity() and
-       room.storage.id != exclude
-      storage.push(room.storage)
+  if unit.store[RESOURCE_ENERGY] > 0
+    structures = filter transferStructures, (s) -> s.id != exclude
+  storage = filter transferStorage, (s) -> s.id != exclude
 
   if not structures.length
     if not storage.length
       return undefined
-    closest = getClosest(unit, storage)
+    closest = getClosest unit, storage
     if closest?
       return closest.id
 

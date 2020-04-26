@@ -1,7 +1,7 @@
 { countBy, filter, keys, merge, sample, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
-{ getPath, moveTo, moveBy, goTo } = require 'paths'
+{ moveTo, goTo } = require 'paths'
 { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
   fortifyTarget, buildTarget, collectTarget, transferTarget,
   flagTarget, claimTarget, resupplyTarget, refillTarget,
@@ -88,19 +88,19 @@ mine = (unit) ->
 transfer = (unit) ->
   unit.memory.transferTarget or= transferTarget unit
   target = Game.getObjectById(unit.memory.transferTarget)
-  if not target? or not target.store? or
-     target.store.getUsedCapacity() == target.store.getCapacity() or
-     target.structureType is STRUCTURE_STORAGE
-    unit.memory.transferTarget = transferTarget unit
+  if not target? or not target.store? or target.store.getUsedCapacity() == target.store.getCapacity()
+    unit.memory.transferTarget = transferTarget(unit, exclude=unit.memory.exclude)
     target = Game.getObjectById(unit.memory.transferTarget)
     if not target?
-      unit.memory.transferTarget = undefined
       return
 
   if unit.pos.inRangeTo(target, 1)
-    if unit.transfer(target, keys(unit.store)[0]) is OK
+    type = keys(unit.store)[0]
+    if unit.transfer(target, type) is OK
       # Successfully transferred resources so start heading towards the next target
-      unit.memory.transferTarget = transferTarget(unit, exclude=unit.memory.transferTarget)
+      if target.structureType is STRUCTURE_STORAGE and type is RESOURCE_ENERGY
+        unit.memory.exclude = target.id
+      unit.memory.transferTarget = transferTarget(unit, exclude=unit.memory.exclude)
       target = Game.getObjectById(unit.memory.transferTarget)
 
   location = pos: target.pos, range: 1
@@ -123,16 +123,14 @@ collect = (unit) ->
     if not target.store?
       result = unit.pickup(target)
     else
-      for type in keys target.store
-        result = unit.withdraw(target, type)
-        if result is OK
-          # Successfully collected resources so start heading towards the target we want to transfer them to
-          unit.memory.transferTarget = transferTarget unit
-          target = Game.getObjectById(unit.memory.transferTarget)
-          if not target?
-            unit.memory.transferTarget = undefined
-            return
-          break
+      type = keys(target.store)[0]
+      if unit.withdraw(target, type) is OK
+        # Successfully collected resources so start heading towards the target we want to transfer them to
+        unit.memory.transferTarget = transferTarget unit, exclude=unit.memory.exclude
+        target = Game.getObjectById(unit.memory.transferTarget)
+        if not target?
+          unit.memory.transferTarget = undefined
+          return
 
   location = pos: target.pos, range: 1
   goTo location, unit

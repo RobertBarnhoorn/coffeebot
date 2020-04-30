@@ -22,9 +22,10 @@ mines = filter flatten(map(myControlledRooms, ((r) -> r.find(FIND_MINERALS)))),
                                                       ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0
 
 damagedStructures = filter flatten(map(myRooms, ((r) -> r.find FIND_STRUCTURES))),
-                           (s) -> s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
-                                  s.hits < s.hitsMax and
-                                  (s.my or s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER])
+                           (s) -> (s.hits < s.hitsMax and
+                                   s.structureType not in [STRUCTURE_WALL, STRUCTURE_RAMPART] and
+                                  (s.my or s.structureType in [STRUCTURE_ROAD, STRUCTURE_CONTAINER])) or
+                                  (s.hits < 5000 and s.structureType is STRUCTURE_RAMPART)
   
 constructionSites = flatten map myRooms, (r) -> r.find FIND_MY_CONSTRUCTION_SITES
 
@@ -193,7 +194,7 @@ resupplyTarget = (unit) ->
     return undefined
 
   candidates = filter resupplyPoints, ((r) -> (if r.amount? \
-                                              then (r.amount > threshold and r.resource_type is RESOURCE_ENERGY) \
+                                              then (r.amount > threshold and r.resourceType is RESOURCE_ENERGY) \
                                               else r.store[RESOURCE_ENERGY] > threshold))
 
   if not candidates.length
@@ -205,7 +206,7 @@ resupplyTarget = (unit) ->
   return (sample candidates).id
 
 refillTarget = (unit) ->
-  candidates = filter nonFullTowers, (t) -> not any(t.id is u.memory.refillTarget for u in values units)
+  candidates = filter nonFullTowers
 
   if not candidates.length
     return undefined

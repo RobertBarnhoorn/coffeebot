@@ -192,7 +192,9 @@ resupplyTarget = (unit) ->
   if resupplyPoints.length == 0
     return undefined
 
-  candidates = filter resupplyPoints, ((r) -> (if r.amount? then r.amount > threshold else r.store[RESOURCE_ENERGY] > threshold))
+  candidates = filter resupplyPoints, ((r) -> (if r.amount? \
+                                              then (r.amount > threshold and r.resource_type is RESOURCE_ENERGY) \
+                                              else r.store[RESOURCE_ENERGY] > threshold))
 
   if not candidates.length
     return undefined

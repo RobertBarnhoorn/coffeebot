@@ -113,13 +113,27 @@ collect = (unit) ->
   unit.memory.collectTarget or= collectTarget unit
   target = Game.getObjectById(unit.memory.collectTarget)
 
-  if not target? or (target.amount? and target.amount < 50) or (target.store? and target.store.getUsedCapacity() < 50)
+  if not target?
     unit.memory.collectTarget = collectTarget unit
     target = Game.getObjectById(unit.memory.collectTarget)
 
   if not target?
     unit.memory.collectTarget = undefined
     return
+
+  # How much does this unit need
+  collectAmount = unit.store.getCapacity() - unit.store.getUsedCapacity()
+  if target.amount?
+    if target.amount < collectAmount
+      unit.memory.collectTarget = undefined
+      return
+    leftOver = Math.max 0, (target.amount - collectAmount)
+    target.amount = leftOver
+  else
+    for type in keys(target.store)
+      leftOver = Math.max 0, (target.store[type] - collectAmount)
+      collectAmount -= leftOver
+      target.store[type] = leftOver
 
   location = pos: target.pos, range: 1
   goTo location, unit
@@ -240,6 +254,19 @@ resupply = (unit) ->
   # Couldn't find a target
   if not target?
     return false
+
+  # How much does this unit need
+  resupplyAmount = unit.store.getCapacity() - unit.store.getUsedCapacity()
+  if target.amount?
+    if target.amount < resupplyAmount
+      unit.memory.resupplyTarget = undefined
+      return
+    leftOver = Math.max 0, (target.amount - resupplyAmount)
+    target.amount = leftOver
+  else
+    leftOver = Math.max 0, (target.store[RESOURCE_ENERGY] - resupplyAmount)
+    resupplyAmount -= leftOver
+    target.store[RESOURCE_ENERGY] = leftOver
 
   # Move to target resources and use them to resupply
   if unit.pickup(target) is OK or unit.withdraw(target, RESOURCE_ENERGY) is OK

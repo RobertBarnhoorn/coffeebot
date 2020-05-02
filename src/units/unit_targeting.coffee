@@ -1,4 +1,4 @@
-{ any, filter, flatten, forEach, keys, map, random, sample, shuffle, slice, sortBy, values } = require 'lodash'
+{ any, filter, flatten, forEach, keys, map, random, sample, shuffle, slice, sortBy, sum, values } = require 'lodash'
 { minBy } = require 'algorithms'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
@@ -72,8 +72,9 @@ transferTarget = (unit) ->
   return (sample candidates).id
 
 collectTarget = (unit) ->
-  threshold = 100
-  candidates = filter collectables, (c) -> (if c.amount? then c.amount > threshold else c.store.getUsedCapacity() > threshold)
+  collectAmount = unit.store.getCapacity() - unit.store.getUsedCapacity()
+  candidates = filter collectables, (c) -> (if c.amount? then c.amount > collectAmount \
+                                            else c.store.getUsedCapacity() > collectAmount)
 
   if not candidates.length
     return undefined
@@ -188,14 +189,12 @@ buildTarget = (unit) ->
   return (sample constructionSites).id
 
 resupplyTarget = (unit) ->
-  threshold = 100
-
+  resupplyAmount = unit.store.getCapacity() - unit.store.getUsedCapacity()
   if resupplyPoints.length == 0
     return undefined
 
-  candidates = filter resupplyPoints, ((r) -> (if r.amount? \
-                                              then (r.amount > threshold and r.resourceType is RESOURCE_ENERGY) \
-                                              else r.store[RESOURCE_ENERGY] > threshold))
+  candidates = filter resupplyPoints, ((r) -> (if r.amount? then (r.amount > resupplyAmount and r.resourceType is RESOURCE_ENERGY) \
+                                              else r.store[RESOURCE_ENERGY] > resupplyAmount))
 
   if not candidates.length
     return undefined

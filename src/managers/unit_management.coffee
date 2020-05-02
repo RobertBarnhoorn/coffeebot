@@ -9,7 +9,7 @@ unitManagement = ->
   roleCount = {}
   roleSum = {}
 
-  for u in shuffle values units
+  for u in values units
     role = u.memory.role
     if role not in roleCount
       roleCount[role] = 1

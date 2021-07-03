@@ -1,4 +1,4 @@
-{ countBy, filter, keys, merge, sample, values } = require 'lodash'
+{ countBy, filter, keys, merge, sample, sum, values } = require 'lodash'
 { roles } = require 'unit_roles'
 { rooms } = require 'rooms'
 { moveTo, goTo } = require 'paths'
@@ -130,6 +130,9 @@ collect = (unit) ->
     leftOver = Math.max 0, (target.amount - collectAmount)
     target.amount = leftOver
   else
+    if sum(target.store) < collectAmount
+      unit.memory.collectTarget = undefined
+      return
     for type in keys(target.store)
       leftOver = Math.max 0, (target.store[type] - collectAmount)
       collectAmount -= leftOver

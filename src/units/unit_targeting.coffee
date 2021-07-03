@@ -17,6 +17,8 @@ energyStructures = filter myStructures, (s) -> s.structureType in [STRUCTURE_EXT
 
 storage = filter myStructures, (s) -> s.structureType is STRUCTURE_STORAGE
 
+links = filter myStructures, (s) -> s.structureType is STRUCTURE_LINK
+
 mines = filter flatten(map(myControlledRooms, ((r) -> r.find(FIND_MINERALS)))),
                (m) -> m.mineralAmount > 0 and (filter m.pos.findInRange(FIND_STRUCTURES, 0),
                                                       ((s) -> s.structureType is STRUCTURE_EXTRACTOR)).length > 0
@@ -47,7 +49,7 @@ containers = filter flatten(map(myRooms, ((r) -> r.find(FIND_STRUCTURES)))),
 nonFullTowers = filter myStructures, (s) -> s.structureType is STRUCTURE_TOWER and
                                             s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
 
-collectables = [resources..., tombs..., ruins..., containers...]
+collectables = [resources..., tombs..., ruins..., containers..., links...]
 
 resupplyPoints = [collectables..., storage...]
 
@@ -61,7 +63,9 @@ transferTarget = (unit) ->
     candidateStructures = filter energyStructures, (s) -> s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
 
   candidateStorage = filter storage, (s) -> s.store.getUsedCapacity() < s.store.getCapacity()
-  candidates = [candidateStructures..., candidateStorage...]
+  candidateLinks = links
+
+  candidates = [candidateStructures..., candidateStorage..., candidateLinks...]
 
   if not candidates.length
     return undefined
@@ -225,4 +229,4 @@ healTarget = (unit) ->
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    fortifyTarget, buildTarget, collectTarget, transferTarget,
                    flagTarget, claimTarget, resupplyTarget, refillTarget,
-                   healTarget, mineTarget, constructionSites, mines }
+                   healTarget, mineTarget, constructionSites, mines, links }

@@ -127,7 +127,6 @@ deserializePath = (pathStr) ->
   return deserialized
 
 getCostMatrix = (roomName, avoid=null) ->
-  console.log "here"
   # Initialise the matrices object if a global reset has occurred
   if not global.matrices?
     global.matrices = {}
@@ -138,13 +137,13 @@ getCostMatrix = (roomName, avoid=null) ->
   if not roomMem['ttl']? or roomMem['ttl'] <= 0
     costs = generateCostMatrix roomName, avoid
     return null if not costs?
-    global.matrices = costs
+    global.matrices[roomName] = costs
     roomMem['costs'] = costs.serialize()
     roomMem['ttl'] = 200
   else
     roomMem['ttl'] -= 1
 
-  costs = global.matrices
+  costs = global.matrices[roomName]
 
   # Global cache miss so take from memory
   if not costs?

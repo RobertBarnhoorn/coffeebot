@@ -23,8 +23,17 @@ unitsMem = readMem 'creeps'
 # Delete the memory of a specific unit
 deleteUnitMem = (u) -> delete unitsMem[u]
 
-# Get the memory of all rooms
-roomsMem = readMem 'rooms'
+# Get the memory for a specific room
+roomsMem = (roomName ) ->
+  _roomsMem = readMem 'rooms'
+  if not _roomsMem
+    writeMem 'rooms', {}
+
+  _roomMem = _roomsMem[roomName]
+  if not _roomMem
+    _roomsMem[roomName] = {}
+
+  return _roomsMem[roomName]
 
 # Check if a memory location holds anything
 memExists = (k) -> (readMem k)?

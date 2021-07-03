@@ -1,6 +1,6 @@
 { dropWhile, find, filter, forEach, last, map } = require 'lodash'
 { rooms } = require 'rooms'
-{ roomsMem} = require 'memory'
+{ roomsMem } = require 'memory'
 
 moveTo = (location, unit) ->
   unit.moveTo location, reusePath: 5, maxRooms: 1, visualizePathStyle:
@@ -132,25 +132,23 @@ getCostMatrix = (roomName, avoid=null) ->
   if not global.matrices?
     global.matrices = {}
 
-  # Make sure memory space has been assigned for the room
-  if not roomsMem[roomName]?
-    roomsMem[roomName] = {}
+  roomMem = roomsMem roomName
 
   # Generate a new costMatrix if the Matrix isn't in cache or the cache entry is stale 
-  if not roomsMem[roomName]['ttl']? or roomsMem[roomName]['ttl'] <= 0
+  if not roomMem['ttl']? or roomMem['ttl'] <= 0
     costs = generateCostMatrix roomName, avoid
     return null if not costs?
-    global.matrices[roomName] = costs
-    roomsMem[roomName]['costs'] = costs.serialize()
-    roomsMem[roomName]['ttl'] = 200
+    global.matrices = costs
+    roomMem['costs'] = costs.serialize()
+    roomMem['ttl'] = 200
   else
-    roomsMem[roomName]['ttl'] -= 1
+    roomMem['ttl'] -= 1
 
-  costs = global.matrices[roomName]
+  costs = global.matrices
 
   # Global cache miss so take from memory
   if not costs?
-    costs = PathFinder.CostMatrix.deserialize roomsMem[roomName]['costs']
+    costs = PathFinder.CostMatrix.deserialize roomMem['costs']
     global.matrices[roomName] = costs
 
   # Pathfind around anything in this list (usually other units)

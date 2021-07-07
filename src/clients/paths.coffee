@@ -127,6 +127,7 @@ deserializePath = (pathStr) ->
   return deserialized
 
 getCostMatrix = (roomName, avoid=null) ->
+  console.log "here"
   # Initialise the matrices object if a global reset has occurred
   if not global.matrices?
     global.matrices = {}

@@ -229,4 +229,5 @@ healTarget = (unit) ->
 module.exports = { upgradeTarget, harvestTarget, reserveTarget, repairTarget,
                    fortifyTarget, buildTarget, collectTarget, transferTarget,
                    flagTarget, claimTarget, resupplyTarget, refillTarget,
-                   healTarget, mineTarget, constructionSites, mines, links }
+                   healTarget, mineTarget, constructionSites, damagedStructures,
+                   damagedDefences, mines, links }

@@ -7,7 +7,7 @@
 { rooms } = require 'rooms'
 { generateUnit } = require 'spawn_behaviours'
 { MYSELF } = require 'constants'
-{ constructionSites, mines } = require 'unit_targeting'
+{ constructionSites, damagedStructures, damagedDefences, mines } = require 'unit_targeting'
 
 priorities = [roles.HARVESTER, roles.TRANSPORTER, roles.UPGRADER, roles.BUILDER, roles.REPAIRER,
               roles.FORTIFIER, roles.MINER, roles.RESERVER, roles.CLAIMER, roles.SOLDIER,
@@ -24,8 +24,10 @@ desired = (role) ->
     when roles.TRANSPORTER      then 1 * mySources.length
     when roles.UPGRADER         then 1 * myRooms.length
     when roles.BUILDER          then (if constructionSites.length then 3 else 0)
-    when roles.REPAIRER         then 2 * myControlledRooms.length
-    when roles.FORTIFIER        then 2 * myControlledRooms.length
+    when roles.REPAIRER
+      if damagedStructures.length then 2 * myControlledRooms.length else 0
+    when roles.FORTIFIER
+      if damagedStructures.length then 2 * myControlledRooms.length else 0
     when roles.MINER            then 1 * mines.length
     when roles.RESERVER
       flagCount[flag_intents.RESERVE]

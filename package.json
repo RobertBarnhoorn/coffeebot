@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "coffeescript": "^2.5.1",
-    "dotenv": "^10.0.0",
-    "grunt": "^1.4.1",
-    "grunt-screeps": "^1.5.0"
-  }
-}

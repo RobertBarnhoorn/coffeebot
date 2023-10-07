@@ -5,9 +5,6 @@ bin/
 # Created by https://www.gitignore.io/api/vim,node,macos,coffeescript
 # Edit at https://www.gitignore.io/?templates=vim,node,macos,coffeescript
 
-### CoffeeScript ###
-*.js
-
 ### macOS ###
 # General
 .DS_Store
